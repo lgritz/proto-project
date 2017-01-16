@@ -1,0 +1,10 @@
+*~
+branches/
+build/
+dist/
+*.pyc
+src/doc/figures/
+.cproject
+.project
+*.sublime-project
+*.sublime-workspace

@@ -1,0 +1,43 @@
+// Copyright 2017 Larry Gritz (et al)
+// MIT open source license, see the LICENSE file of this distribution
+// or https://opensource.org/licenses/MIT
+
+#pragma once
+
+// Versioning of the software
+#define @PROJECT_NAME@_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
+#define @PROJECT_NAME@_VERSION_MINOR @PROJECT_VERSION_MINOR@
+#define @PROJECT_NAME@_VERSION_PATCH @PROJECT_VERSION_PATCH@
+#define @PROJECT_NAME@_VERSION_RELEASE_TYPE @PROJECT_VERSION_RELEASE_TYPE@
+#define @PROJECT_NAME@_VERSION_NS @PROJECT_VERSION_NS@
+
+#define @PROJECT_NAME@_VERSION (10000 * @PROJECT_NAME@_VERSION_MAJOR + \
+                         100 * @PROJECT_NAME@_VERSION_MINOR + \
+                               @PROJECT_NAME@_VERSION_PATCH)
+
+// Magic macros to make @PROJECT_NAME@_VERSION_STRING that looks like "1.2.3"
+#define @PROJECT_NAME@_MAKE_VERSION_STRING2(a,b,c,d) #a "." #b "." #c #d
+#define @PROJECT_NAME@_MAKE_VERSION_STRING(a,b,c,d) @PROJECT_NAME@_MAKE_VERSION_STRING2(a,b,c,d)
+#define @PROJECT_NAME@_VERSION_STRING \
+    @PROJECT_NAME@_MAKE_VERSION_STRING(@PROJECT_NAME@_VERSION_MAJOR, \
+                              @PROJECT_NAME@_VERSION_MINOR, @PROJECT_NAME@_VERSION_PATCH, \
+                              @PROJECT_NAME@_VERSION_RELEASE_TYPE)
+#define @PROJECT_NAME@_INTRO_STRING "@PROJECT_NAME@ " @PROJECT_NAME@_VERSION_STRING " @PROJECT_URL@"
+#define @PROJECT_NAME@_COPYRIGHT_STRING "(c) Copyright @PROJECT_COPYRIGHTYEARS@ @PROJECT_AUTHORS@. All rights reserved."
+
+
+#ifdef @PROJECT_NAME@_NAMESPACE
+// Macros to use in each file to enter and exit the right name spaces.
+#define @PROJECT_NAME@_NAMESPACE_BEGIN namespace @PROJECT_NAME@_NAMESPACE { namespace @PROJECT_NAME@ {
+#define @PROJECT_NAME@_NAMESPACE_END }; }; using namespace @PROJECT_NAME@_NAMESPACE;
+#else
+#define @PROJECT_NAME@_NAMESPACE_BEGIN namespace @PROJECT_NAME@ {
+#define @PROJECT_NAME@_NAMESPACE_END };
+#endif
+
+
+#define @PROJECT_NAME@_BUILD_CPP11 1 /* Always build for C++ >= 11 */
+// @PROJECT_NAME@_BUILD_CPP14 will be 1 if this software was built using C++14
+#define @PROJECT_NAME@_BUILD_CPP14 (@USE_CPP@ >= 14)
+// @PROJECT_NAME@_BUILD_CPP17 will be 1 if this software was built using C++17
+#define @PROJECT_NAME@_BUILD_CPP17 (@USE_CPP@ >= 17)
