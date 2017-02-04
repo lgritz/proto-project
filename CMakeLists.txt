@@ -1,5 +1,5 @@
 # Define the name of the project and the release version
-cmake_minimum_required (VERSION 3.5)
+cmake_minimum_required (VERSION 3.2.2)
 cmake_policy (SET CMP0048 NEW)  # Allow VERSION specifier in project()
 project (Proto
          VERSION 1.0.0

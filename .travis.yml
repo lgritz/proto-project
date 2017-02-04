@@ -12,14 +12,16 @@ addons:
    sources:
       - boost-latest
       - ubuntu-toolchain-r-test
+      - george-edison55-precise-backports
    packages:
+      - cmake
+      - cmake-data
       - gcc-6
       - g++-6
-      - libboost1.60-all-dev
+      - libboost1.55-all-dev
       - libgif-dev
       - libtiff4-dev
       - libopenjpeg-dev
-      - libwebp-dev
       - ffmpeg
       - libfreetype6-dev
       - libjpeg-turbo8-dev
@@ -38,8 +40,9 @@ before_install:
           sysctl machdep.cpu.features ;
       elif [ $TRAVIS_OS_NAME == linux ] ; then
           export PLATFORM=linux64 ;
-          head -40 /proc/cpuinfo ;
+          head -30 /proc/cpuinfo ;
       fi
+    - export OIIOPLATFORM=$PLATFORM
     - if [ "$DEBUG" == 1 ] ; then export PLATFORM=${PLATFORM}.debug ; fi
     - echo "Build platform name is $PLATFORM"
 
@@ -54,20 +57,23 @@ install:
           export ILMBASE_HOME=$PWD/openexr-install ;
           export OPENEXR_HOME=$PWD/openexr-install ;
       fi
-    - src/build-scripts/install_test_images.bash
+    - export OIIOMAKEFLAGS="$OIIOMAKEFLAGS OIIO_BUILD_TESTS=0 -j2 DEBUG= "
+    - src/build-scripts/build_openimageio.bash
+    - export OPENIMAGEIOHOME=$PWD/OpenImageIO/dist/$OIIOPLATFORM
+    - export DYLD_LIBRARY_PATH=$OPENIMAGEIOHOME/lib:$DYLD_LIBRARY_PATH
+    - export LD_LIBRARY_PATH=$OPENIMAGEIOHOME/lib:$LD_LIBRARY_PATH
+    - export PYTHONPATH=$OPENIMAGEIOHOME/python:$PYTHONPATH
+    - export PATH=$OPENIMAGEIOHOME/bin:$PATH
 
 # before_script:
 
 script:
     - make VERBOSE=1 $BUILD_FLAGS cmakesetup
     - make -j2 $BUILD_FLAGS
-    #- export OPENIMAGEIOHOME=$PWD/dist/$PLATFORM
-    #- export DYLD_LIBRARY_PATH=$OPENIMAGEIOHOME/lib:$DYLD_LIBRARY_PATH
-    #- export LD_LIBRARY_PATH=$OPENIMAGEIOHOME/lib:$LD_LIBRARY_PATH
-    #- export OIIO_LIBRARY_PATH=$OPENIMAGEIOHOME/lib
-    #- echo "OIIO_LIBRARY_PATH is ${OIIO_LIBRARY_PATH}"
-    #- export PYTHONPATH=$OPENIMAGEIOHOME/python:$PYTHONPATH
-    - export LSAN_OPTIONS=suppressions=$PWD/src/build-scripts/nosanitize.txt
+    - export PROJECTHOME=$PWD/dist/$PLATFORM
+    - export DYLD_LIBRARY_PATH=$PROJECTHOME/lib:$DYLD_LIBRARY_PATH
+    - export LD_LIBRARY_PATH=$PROJECTHOME/lib:$LD_LIBRARY_PATH
+    - export PYTHONPATH=$PROJECTHOME/python:$PYTHONPATH
     - make $BUILD_FLAGS test
 
 
@@ -104,11 +110,11 @@ matrix:
       #   env: USE_CPP=14
       - os: linux
         compiler: gcc
-        env: WHICHGCC=6 USE_CPP=14
+        env: USE_CPP=14
     # Build with sanitizers
       - os: linux
         compiler: gcc
-        env: WHICHGCC=6 SANITIZE=address USE_PYTHON=0
+        env: SANITIZE=address USE_PYTHON=0
 
 
 

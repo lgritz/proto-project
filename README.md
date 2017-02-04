@@ -22,4 +22,3 @@ everything I might need (not all implemented yet):
 * TravisCI and Appveyor build and testsuite.
 * All the right stubs for readmes, license files, CLAs, release notes,
   documentation, etc.
-
