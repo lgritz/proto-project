@@ -11,7 +11,8 @@
 #   OPENIMAGEIO_VERSION_PATCH  Version minor patch
 #
 # Special inputs:
-#   OPENIMAGEIOHOME - custom location of headers
+#   OPENIMAGEIOHOME - custom "prefix" location of OIIO installation
+#                      (expecting bin, lib, include subdirectories)
 #
 
 
@@ -48,12 +49,13 @@ if (EXISTS "${OIIO_VERSION_HEADER}")
     string (REGEX MATCHALL "[0-9]+" OPENIMAGEIO_VERSION_MINOR ${TMP})
     file (STRINGS "${OIIO_VERSION_HEADER}" TMP REGEX "^#define OIIO_VERSION_PATCH .*$")
     string (REGEX MATCHALL "[0-9]+" OPENIMAGEIO_VERSION_PATCH ${TMP})
+    set (OPENIMAGEIO_VERSION "${OPENIMAGEIO_VERSION_MAJOR}.${OPENIMAGEIO_VERSION_MINOR}.${OPENIMAGEIO_VERSION_PATCH}")
 endif ()
 
 if (NOT OpenImageIO_FIND_QUIETLY)
-    message ( STATUS "OpenImageIO includes = ${OPENIMAGEIO_INCLUDE_DIR}" )
-    message ( STATUS "OpenImageIO library = ${OPENIMAGEIO_LIBRARY}" )
-    message ( STATUS "OpenImageIO bin = ${OPENIMAGEIO_BIN}" )
+    message ( STATUS "OpenImageIO includes  = ${OPENIMAGEIO_INCLUDE_DIR}" )
+    message ( STATUS "OpenImageIO libraries = ${OPENIMAGEIO_LIBRARIES}" )
+    message ( STATUS "OpenImageIO bin       = ${OPENIMAGEIO_BIN}" )
 endif ()
 if ( OPENIMAGEIO_INCLUDE_DIR AND OPENIMAGEIO_LIBRARY )
     set ( OPENIMAGEIO_FOUND TRUE )
@@ -64,7 +66,7 @@ endif ()
 
 include (FindPackageHandleStandardArgs)
 find_package_handle_standard_args (OpenImageIO
-    REQUIRED_VARS OPENIMAGEIO_INCLUDE_DIR OPENIMAGEIO_LIBRARIES
+    REQUIRED_VARS OPENIMAGEIO_INCLUDE_DIR OPENIMAGEIO_LIBRARIES OPENIMAGEIO_VERSION
     VERSION_VAR   OPENIMAGEIO_VERSION
     )
 
