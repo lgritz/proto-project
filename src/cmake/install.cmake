@@ -83,7 +83,7 @@ endif ()
 #
 # Usage:
 #
-#    oiio_install_targets (target1 [target2 ...])
+#    install_targets (target1 [target2 ...])
 #
 macro (install_targets)
     install (TARGETS ${ARGN}
