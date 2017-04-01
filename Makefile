@@ -169,6 +169,20 @@ ifneq (${SANITIZE},)
 MY_CMAKE_FLAGS += -DSANITIZE=${SANITIZE}
 endif
 
+ifneq (${CLANG_TIDY},)
+  MY_CMAKE_FLAGS += -DCLANG_TIDY:BOOL=1
+endif
+ifneq (${CLANG_TIDY_CHECKS},)
+  MY_CMAKE_FLAGS += -DCLANG_TIDY_CHECKS:STRING=${CLANG_TIDY_CHECKS}
+endif
+ifneq (${CLANG_TIDY_ARGS},)
+  MY_CMAKE_FLAGS += -DCLANG_TIDY_ARGS:STRING=${CLANG_TIDY_ARGS}
+endif
+ifneq (${CLANG_TIDY_FIX},)
+  MY_CMAKE_FLAGS += -DCLANG_TIDY_FIX:BOOL=${CLANG_TIDY_FIX}
+  MY_NINJA_FLAGS += -j 1
+  # N.B. when fixing, you don't want parallel jobs!
+endif
 
 #$(info MY_CMAKE_FLAGS = ${MY_CMAKE_FLAGS})
 #$(info MY_MAKE_FLAGS = ${MY_MAKE_FLAGS})
@@ -320,6 +334,8 @@ help:
 	@echo "      USE_CCACHE=0             Disable ccache (even if available)"
 	@echo "      CODECOV=1                Enable code coverage tests"
 	@echo "      SANITIZE=name1,...       Enablie sanitizers (address, leak, thread)"
+	@echo "      CLANG_TIDY=1             Run clang-tidy on all source (can be modified"
+	@echo "                                  by CLANG_TIDY_ARGS=... and CLANG_TIDY_FIX=1"
 	@echo "  Linking and libraries:"
 	@echo "      HIDE_SYMBOLS=1           Hide symbols not in the public API"
 	@echo "      SOVERSION=nn             Include the specifed major version number "

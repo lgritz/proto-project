@@ -6,8 +6,8 @@
 #ifndef PROTO_H
 #define PROTO_H
 
-#include "version.h"
-#include "export.h"
+#include <Proto/version.h>
+#include <Proto/export.h>
 
 Proto_NAMESPACE_BEGIN
 

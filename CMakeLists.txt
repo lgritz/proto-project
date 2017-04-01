@@ -4,6 +4,8 @@ cmake_policy (SET CMP0048 NEW)  # Allow VERSION specifier in project()
 project (Proto
          VERSION 1.0.0
          LANGUAGES CXX)
+set (PROJ_NAME ${PROJECT_NAME})    # optional short name
+string (TOLOWER ${PROJ_NAME} PROJ_NAME_LOWER)  # short name lower case
 set (PROJECT_VERSION_RELEASE_TYPE "dev")   # "dev", "betaX", "RCY", ""
 set (${PROJECT_NAME}_VERSION_RELEASE_TYPE ${PROJECT_VERSION_RELEASE_TYPE})
 set (PROJECT_COPYRIGHTYEARS "2017")
@@ -85,7 +87,6 @@ include_directories (
     BEFORE
     "${CMAKE_SOURCE_DIR}/src/include"
     "${CMAKE_BINARY_DIR}/include"
-    "${CMAKE_BINARY_DIR}/include/${PROJECT_NAME}"
   )
 
 
