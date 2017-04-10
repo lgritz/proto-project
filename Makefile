@@ -105,12 +105,12 @@ ifneq (${LINKSTATIC},)
 MY_CMAKE_FLAGS += -DLINKSTATIC:BOOL=${LINKSTATIC}
 endif
 
-ifneq (${BUILD_TOOLS},)
-MY_CMAKE_FLAGS += -DBUILD_TOOLS:BOOL=${BUILD_TOOLS}
-endif
-
 ifneq (${BUILD_TESTS},)
 MY_CMAKE_FLAGS += -DBUILD_TESTS:BOOL=${BUILD_TESTS}
+endif
+
+ifneq (${BUILD_TOOLS},)
+MY_CMAKE_FLAGS += -DBUILD_TOOLS:BOOL=${BUILD_TOOLS}
 endif
 
 ifneq (${SOVERSION},)
@@ -351,7 +351,7 @@ help:
 	@echo "      USE_PYTHON3=1            If 1, try to build against Python3, not 2.x"
 	@echo "      PYTHON_VERSION=2.6       Specify the Python version"
 	@echo "  Build-time options:"
-	@echo "      NAMESPACE=name           Wrap everything in another namespace"
+	@echo "      NAMESPACE=name           Override namespace base name"
 	@echo "      BUILD_TOOLS=0            Skip building the command-line tools"
 	@echo "      BUILD_TESTS=0            Skip building the unit tests"
 	@echo "      USE_SIMD=arch            Build with SIMD support (choices: 0, sse2, sse3,"

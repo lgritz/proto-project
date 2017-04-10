@@ -57,31 +57,28 @@ include (platform)
 include (compiler)
 
 
-option (VERBOSE "Print lots of messages while compiling")
+option (VERBOSE "Print lots of messages while compiling" OFF)
+set (${PROJ_NAME}_NAMESPACE ${PROJ_NAME} CACHE STRING "Customized outer namespace base name (version will be added)")
 option (BUILD_TOOLS "Build the command-line tools" ON)
 option (BUILD_TESTS "Build the unit tests" ON)
 option (USE_PYTHON "Build the Python bindings" ON)
-option (USE_PYTHON3 "Build the Python3 bindings")
+option (USE_PYTHON3 "Build the Python3 bindings" OFF)
 set (PYTHON_VERSION 2.6)
 set (PYTHON3_VERSION 3.2)
-option (PYLIB_INCLUDE_SONAME "If ON, soname/soversion will be set for Python module library")
-option (PYLIB_LIB_PREFIX "If ON, prefix the Python module with 'lib'")
+option (PYLIB_INCLUDE_SONAME "If ON, soname/soversion will be set for Python module library" OFF)
+option (PYLIB_LIB_PREFIX "If ON, prefix the Python module with 'lib'" OFF)
 
 # Set the default namespace
-set (NAMESPACE ${PROJECT_NAME} CACHE STRING
-      "Specify the master C++ namespace: Options include ${PROJECT_NAME} ${PROJECT_NAME}_<YOURFACILITY> etc.")
-message(STATUS "Setting Namespace to: ${NAMESPACE}")
+set (PROJ_NAMESPACE "${${PROJ_NAME}_NAMESPACE}")
+set (PROJ_NAMESPACE_V "${PROJ_NAMESPACE}_v${PROJECT_VERSION_MAJOR}_${PROJECT_VERSION_MINOR}")
+message(STATUS "Setting Namespace to: ${PROJ_NAMESPACE_V}")
 
 set (SOVERSION ${PROJECT_VERSION_MAJORMINOR}
      CACHE STRING "Set the SO version in the SO name of the output library")
 
-if (DEFINED ENV{TRAVIS} OR DEFINED ENV{APPVEYOR} OR DEFINED ENV{CI})
-    add_definitions ("-DBUILD_CI")
-endif ()
-
 
 include (externalpackages)
-include (install)
+include (install)          # installation options all implemented here
 
 include_directories (
     BEFORE
