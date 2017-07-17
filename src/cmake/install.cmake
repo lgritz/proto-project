@@ -59,6 +59,7 @@ set (INSTALL_FONTS ON CACHE BOOL "Install default fonts")
 
 ###########################################################################
 # Rpath handling at the install step
+set (MACOSX_RPATH ON)
 if (CMAKE_SKIP_RPATH)
     # We need to disallow the user from truly setting CMAKE_SKIP_RPATH, since
     # we want to run the generated executables from the build tree in order to
@@ -68,12 +69,16 @@ if (CMAKE_SKIP_RPATH)
     set (CMAKE_SKIP_RPATH FALSE)
     unset (CMAKE_INSTALL_RPATH)
 else ()
-    set (CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-    # was: set (CMAKE_INSTALL_RPATH "${LIB_INSTALL_DIR}")
+    set (CMAKE_INSTALL_RPATH "${LIB_INSTALL_DIR}")
     if (NOT IS_ABSOLUTE ${CMAKE_INSTALL_RPATH})
         set (CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR}")
     endif ()
+    # add the automatically determined parts of the RPATH that
+    # point to directories outside the build tree to the install RPATH
     set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+    if (VERBOSE)
+        message (STATUS "CMAKE_INSTALL_RPATH = ${CMAKE_INSTALL_RPATH}")
+    endif ()
 endif ()
 
 

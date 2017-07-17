@@ -15,7 +15,7 @@
 #   OPENEXR_CUSTOM_LIB_SUFFIX - special snowflake library suffix
 #
 
-# Other standarnd issue macros
+# Other standard issue macros
 include (FindPackageHandleStandardArgs)
 include (SelectLibraryConfigurations)
 
