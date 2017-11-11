@@ -1,0 +1,3 @@
+Hello, world
+Result = 3.0
+Done.

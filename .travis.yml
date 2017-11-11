@@ -3,7 +3,7 @@
 language: cpp
 sudo: false
 osx_image: xcode7.3
-dist: precise
+dist: trusty
 
 
 # Add-ons: specify apt packages for Linux
@@ -13,18 +13,19 @@ addons:
       - boost-latest
       - ubuntu-toolchain-r-test
       - george-edison55-precise-backports
+      - sourceline: 'ppa:jonathonf/ffmpeg-3'
    packages:
-      - cmake
-      - cmake-data
-      - gcc-6
-      - g++-6
-      - libboost1.55-all-dev
-      - libgif-dev
-      - libtiff4-dev
-      - libopenjpeg-dev
-      - ffmpeg
+      # - g++-6
+      - g++-7
+      - libboost-filesystem1.55
+      - libboost-system1.55
+      - libboost-thread1.55
+      #- libgif-dev
+      # - libtiff4-dev
+      # - libopenjpeg-dev
+      # - ffmpeg
       - libfreetype6-dev
-      - libjpeg-turbo8-dev
+      # - libjpeg-turbo8-dev
 
 
 cache:
@@ -34,7 +35,7 @@ cache:
       - $HOME/.ccache
 
 before_install:
-    - if [ "$WHICHGCC" == "" ]; then export WHICHGCC="6" ; fi
+    - if [ "$WHICHGCC" == "" ]; then export WHICHGCC="7" ; fi
     - if [ $TRAVIS_OS_NAME == osx ] ; then
           export PLATFORM=macosx ;
           sysctl machdep.cpu.features ;
@@ -50,16 +51,25 @@ install:
     - if [ "$CXX" == "g++" ]; then export CXX="g++-${WHICHGCC}" ; fi
     - export USE_CCACHE=1
     - export CCACHE_CPP2=1
+    # Temporary fix: Use LG's private openexr branch, until the
+    # fixes are merged into the OpenEXR project that will address
+    # the warnings for gcc7 and C++17 compatibility.
+    -   export EXRREPO=https://github.com/lgritz/openexr.git ;
+    -   export EXRBRANCH=lg-cpp11 ;
     - if [ $TRAVIS_OS_NAME == osx ] ; then
           src/build-scripts/install_homebrew_deps.bash ;
       elif [ $TRAVIS_OS_NAME == linux ] ; then
           CXX="ccache $CXX" CCACHE_CPP2=1 src/build-scripts/build_openexr.bash ;
           export ILMBASE_HOME=$PWD/openexr-install ;
           export OPENEXR_HOME=$PWD/openexr-install ;
+          export LD_LIBRARY_PATH=$OPENEXR_HOME/lib:$LD_LIBRARY_PATH ;
       fi
-    - export OIIOMAKEFLAGS="$OIIOMAKEFLAGS OIIO_BUILD_TESTS=0 -j2 DEBUG= "
+    - export OIIOMAKEFLAGS="$OIIOMAKEFLAGS -j2 DEBUG= USE_PYTHON=0 OIIO_BUILD_TESTS=0"
+    - export OPENIMAGEIO_SITE=travis
+    - export OSL_SITE=travis
     - src/build-scripts/build_openimageio.bash
     - export OPENIMAGEIOHOME=$PWD/OpenImageIO/dist/$OIIOPLATFORM
+    - export PATH=$OPENIMAGEIOHOME/bin:$PATH
     - export DYLD_LIBRARY_PATH=$OPENIMAGEIOHOME/lib:$DYLD_LIBRARY_PATH
     - export LD_LIBRARY_PATH=$OPENIMAGEIOHOME/lib:$LD_LIBRARY_PATH
     - export PYTHONPATH=$OPENIMAGEIOHOME/python:$PYTHONPATH
@@ -70,6 +80,8 @@ install:
 script:
     - make VERBOSE=1 $BUILD_FLAGS cmakesetup
     - make -j2 $BUILD_FLAGS
+    - ls -R dist
+    - export LSAN_OPTIONS=suppressions=$PWD/src/build-scripts/nosanitize.txt
     - export PROJECTHOME=$PWD/dist/$PLATFORM
     - export DYLD_LIBRARY_PATH=$PROJECTHOME/lib:$DYLD_LIBRARY_PATH
     - export LD_LIBRARY_PATH=$PROJECTHOME/lib:$LD_LIBRARY_PATH
@@ -78,7 +90,7 @@ script:
 
 
 after_success:
-    - if [ "$CODECOV" == 1 ] ; then bash <(curl -s https://codecov.io/bash) ; fi
+    - if [ "$CODECOV" == 1 ]; then bash <(curl -s https://codecov.io/bash) ; fi
 
 after_failure:
 # FIXME: find failed logs, stash them or send them to lg?
@@ -110,11 +122,11 @@ matrix:
       #   env: USE_CPP=14
       - os: linux
         compiler: gcc
-        env: USE_CPP=14
+        env: USE_CPP=14 WHICHGCC=7
     # Build with sanitizers
       - os: linux
         compiler: gcc
-        env: SANITIZE=address USE_PYTHON=0
+        env: USE_CPP=14 WHICHGCC=7 SANITIZE=address USE_PYTHON=0
 
 
 

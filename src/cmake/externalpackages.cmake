@@ -15,16 +15,18 @@ if (NOT VERBOSE)
     set (PugiXML_FIND_QUIETLY TRUE)
     set (PythonInterp_FIND_QUIETLY true)
     set (PythonLibs_FIND_QUIETLY true)
-    set (Qt4_FIND_QUIETLY true)
+    set (Qt5_FIND_QUIETLY true)
     set (Threads_FIND_QUIETLY true)
     set (TIFF_FIND_QUIETLY true)
     set (ZLIB_FIND_QUIETLY true)
 endif ()
 
 
-find_package (OpenImageIO)
+find_package (OpenImageIO 1.7)
 if (OPENIMAGEIO_FOUND)
     include_directories ("${OPENIMAGEIO_INCLUDE_DIR}")
+    link_directories ("${OPENIMAGEIO_LIBRARY_DIRS}")
+    message (STATUS "Using OpenImageIO ${OPENIMAGEIO_VERSION}")
 endif ()
 
 
@@ -42,7 +44,7 @@ if (USE_ZLIB)
 endif ()
 
 
-option (USE_OPENEXR "Include OpenEXR/IlmBase support" OFF)
+option (USE_OPENEXR "Include OpenEXR/IlmBase support" ON)
 if (USE_OPENEXR)
     find_package (OpenEXR REQUIRED)
     #OpenEXR 2.2 still has problems with importing ImathInt64.h unqualified
@@ -194,7 +196,17 @@ if (USE_OCIO)
 endif ()
 
 
-option (USE_QT "Include Qt support" OFF)
+option (USE_PUGIXML "Use PugiXML" OFF)
+if (USE_PUGIXML)
+    find_package (PugiXML REQUIRED)
+    include_directories (BEFORE "${PUGIXML_INCLUDE_DIR}")
+endif()
+
+
+###########################################################################
+# Qt setup
+option (USE_QT "Include Qt support" ON)
+option (USE_OPENGL "Include OpenGL support" OFF)
 if (USE_QT)
     set (qt5_modules Core Gui Widgets)
     if (USE_OPENGL)
@@ -213,11 +225,4 @@ else ()
         message (STATUS "try:   export PATH=/usr/local/opt/qt5/bin:$PATH")
     endif ()
 endif ()
-
-
-option (USE_PUGIXML "Use PugiXML" OFF)
-if (USE_PUGIXML)
-    find_package (PugiXML REQUIRED)
-    include_directories (BEFORE ${PUGIXML_INCLUDE_DIR})
-endif()
 

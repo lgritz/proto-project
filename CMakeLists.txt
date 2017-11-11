@@ -3,7 +3,7 @@ cmake_minimum_required (VERSION 3.2.2)
 cmake_policy (SET CMP0048 NEW)  # Allow VERSION specifier in project()
 project (Proto
          VERSION 1.0.0
-         LANGUAGES CXX)
+         LANGUAGES CXX C)
 set (PROJ_NAME ${PROJECT_NAME})    # optional short name
 string (TOLOWER ${PROJ_NAME} PROJ_NAME_LOWER)  # short name lower case
 set (PROJECT_VERSION_RELEASE_TYPE "dev")   # "dev", "betaX", "RCY", ""
@@ -49,6 +49,8 @@ if (CMAKE_USE_FOLDERS)
     set_property (GLOBAL PROPERTY USE_FOLDERS ON)
 endif ()
 
+include (GNUInstallDirs)
+
 set (CMAKE_MODULE_PATH
      "${PROJECT_SOURCE_DIR}/src/cmake/modules"
      "${PROJECT_SOURCE_DIR}/src/cmake")
@@ -61,12 +63,6 @@ option (VERBOSE "Print lots of messages while compiling" OFF)
 set (${PROJ_NAME}_NAMESPACE ${PROJ_NAME} CACHE STRING "Customized outer namespace base name (version will be added)")
 option (BUILD_TOOLS "Build the command-line tools" ON)
 option (BUILD_TESTS "Build the unit tests" ON)
-option (USE_PYTHON "Build the Python bindings" ON)
-option (USE_PYTHON3 "Build the Python3 bindings" OFF)
-set (PYTHON_VERSION 2.6)
-set (PYTHON3_VERSION 3.2)
-option (PYLIB_INCLUDE_SONAME "If ON, soname/soversion will be set for Python module library" OFF)
-option (PYLIB_LIB_PREFIX "If ON, prefix the Python module with 'lib'" OFF)
 
 # Set the default namespace
 set (PROJ_NAMESPACE "${${PROJ_NAME}_NAMESPACE}")
@@ -79,6 +75,7 @@ set (SOVERSION ${PROJECT_VERSION_MAJORMINOR}
 
 include (externalpackages)
 include (install)          # installation options all implemented here
+include (pythonutils)
 
 include_directories (
     BEFORE
@@ -101,70 +98,31 @@ if (BUILD_TOOLS)
   add_subdirectory (src/protobin)
 endif ()
 
-if (USE_PYTHON AND boost_PYTHON_FOUND)
-#    add_subdirectory (src/python)
+if (USE_PYTHON)
+    add_subdirectory (src/python)
 endif ()
-if (USE_PYTHON3 AND boost_PYTHON_FOUND)
-    #build the python3 module in a different binary directory since it will
-    #have the same name as the python2 module (e.g. Proto.so)
-#    add_subdirectory (src/python src/python3)
+
+if (USE_QT AND Qt5_FOUND)
+    add_subdirectory (src/guiapp)
 endif ()
 
 #add_subdirectory (src/doc)
 
 
-
-#########################################################################
-# Testing
-#
-# Just call oiio_add_tests(testname...) for each test.  Additional
-# optional arguments include:
-#     FOUNDVAR   specifies the name of a CMAKE variable; if not defined,
-#                    the test will not be added for 'make test' (helpful
-#                    for excluding tests for libraries not found).
-#     IMAGEDIR   specifies a directory for test images, one level higher
-#                    than where the oiio top level source lives -- a
-#                    message will be printed if not found.
-#     URL        URL where the test images can be found, will be
-#                    incorporated into the error message if the test
-#                    image directory is not found.
-#     LABEL      If set to "broken", will designate the test as one
-#                    that is known to be broken, so will only be run
-#                    for "make testall", but not "make test".
-#
+include (testutils)
 
 # Make a build/platform/testsuite directory, and copy the master runtest.py
 # there. The rest is up to the tests themselves.
 # file (MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/testsuite")
-# add_custom_command (OUTPUT "${CMAKE_BINARY_DIR}/testsuite/runtest.py"
-#                     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-#                         "${CMAKE_SOURCE_DIR}/testsuite/runtest.py"
-#                         "${CMAKE_BINARY_DIR}/testsuite/runtest.py"
-#                     MAIN_DEPENDENCY "${CMAKE_SOURCE_DIR}/testsuite/runtest.py")
-# add_custom_target ( CopyFiles ALL DEPENDS "${CMAKE_BINARY_DIR}/testsuite/runtest.py" )
+add_custom_command (OUTPUT "${CMAKE_BINARY_DIR}/testsuite/runtest.py"
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${CMAKE_SOURCE_DIR}/testsuite/runtest.py"
+                        "${CMAKE_BINARY_DIR}/testsuite/runtest.py"
+                    MAIN_DEPENDENCY "${CMAKE_SOURCE_DIR}/testsuite/runtest.py")
+add_custom_target ( CopyFiles ALL DEPENDS "${CMAKE_BINARY_DIR}/testsuite/runtest.py" )
 
 # Basic tests that apply even to continuous integration tests:
-# oiio_add_tests (
-#                 gpsread misnamed-file nonwhole-tiles
-#                 oiiotool oiiotool-composite oiiotool-deep oiiotool-fixnan
-#                 oiiotool-pattern oiiotool-readerror
-#                 oiiotool-subimage oiiotool-text oiiotool-xform
-#                 maketx oiiotool-maketx
-#                 diff
-#                 dither dup-channels
-#                 dpx ico iff png psd rla sgi
-#                 texture-interp-bicubic
-#                 texture-blurtube
-#                 texture-crop texture-cropover
-#                 texture-derivs texture-fill texture-filtersize
-#                 texture-flipt texture-gray
-#                 texture-mip-nomip texture-mip-trilinear
-#                 texture-overscan texture-pointsample
-#                 texture-uint8
-#                 texture-width0blur
-#                 texture-fat texture-skinny texture-wrapfill
-#                 texture-missing texture-res texture-udim texture-udim2
-#               )
+# add_testsuite_tests (foo bar)
 
 # Add tests that require the Python bindings if we built the Python
 # bindings. This is mostly the test that are specifically about testing
@@ -174,13 +132,9 @@ endif ()
 # We also exclude these tests if this is a sanitizer build on Linux,
 # because the Python interpreter itself won't be linked with the right asan
 # libraries to run correctly.
-if (USE_PYTHON AND boost_PYTHON_FOUND AND NOT BUILD_OIIOUTIL_ONLY)
+if (USE_PYTHON)
     if (NOT SANITIZE_ON_LINUX)
-        # oiio_add_tests (
-        #         python-typedesc python-imagespec python-roi python-deep
-        #         python-imageinput python-imageoutput
-        #         python-imagebuf python-imagebufalgo
-        #     )
+        add_testsuite_tests (python-proto)
     endif ()
 endif ()
 
