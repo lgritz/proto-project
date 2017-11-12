@@ -5,7 +5,7 @@ endif()
 if (USE_OPENGL)
     include_directories (${OPENGL_INCLUDE_DIR} ${GLEW_INCLUDES})
 endif ()
-set (guiapp_srcs guiapp.cpp MyMainWindow.cpp)
+set (guiapp_srcs guiapp.cpp mainwin.cpp)
 add_executable (guiapp ${guiapp_srcs})
 set_target_properties (guiapp PROPERTIES FOLDER "Tools")
 target_link_libraries (guiapp Proto

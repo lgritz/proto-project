@@ -12,7 +12,7 @@
 #include <OpenImageIO/filesystem.h>
 #include <Proto/Proto.h>
 
-#include "MyMainWindow.h"
+#include "mainwin.h"
 
 
 #ifdef WIN32
@@ -81,19 +81,13 @@ main (int argc, char* argv[])
     // if (! foreground_mode)
     //     Sysutil::put_in_background (argc, argv);
 
-    // LG
     QApplication app(argc, argv);
-    MyWindow win;
-    // QPushButton button ("Hello world !");
-    // button.show();
+    MyMainWindow win;
     win.show();
 
-    // Make sure we are the top window with the focus.
-//    mainWin->raise ();
-//    mainWin->activateWindow ();
+    int qtresult = app.exec();
 
-    int r = app.exec();
-    // OK to clean up here
+    // Clean up here
 
-    return r;
+    return qtresult;
 }
