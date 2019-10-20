@@ -1,47 +1,38 @@
-# Define the name of the project and the release version
-cmake_minimum_required (VERSION 3.2.2)
-cmake_policy (SET CMP0048 NEW)  # Allow VERSION specifier in project()
-project (Proto
-         VERSION 1.0.0
+cmake_minimum_required (VERSION 3.12)
+project (Proto VERSION 1.0.0.0
+         HOMEPAGE_URL "https://example.com"
          LANGUAGES CXX C)
 set (PROJ_NAME ${PROJECT_NAME})    # optional short name
 string (TOLOWER ${PROJ_NAME} PROJ_NAME_LOWER)  # short name lower case
+string (TOUPPER ${PROJ_NAME} PROJ_NAME_UPPER)  # short name upper case
 set (PROJECT_VERSION_RELEASE_TYPE "dev")   # "dev", "betaX", "RCY", ""
 set (${PROJECT_NAME}_VERSION_RELEASE_TYPE ${PROJECT_VERSION_RELEASE_TYPE})
-set (PROJECT_COPYRIGHTYEARS "2017")
+set (PROJECT_COPYRIGHTYEARS "2019")
 set (PROJECT_AUTHORS "Main Author et al")
-set (PROJECT_URL "")
 
 set (PROJECT_VERSION_MAJORMINOR
      "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}")
 message (STATUS "Building ${PROJECT_NAME} ${PROJECT_VERSION}")
 message (STATUS "CMake version is ${CMAKE_VERSION}")
-cmake_policy (SET CMP0017 NEW)  # Prefer files from the CMake module directory when including from there.
-cmake_policy (SET CMP0025 NEW)  # Detect AppleClang for new CMake
-cmake_policy (SET CMP0046 OLD)  # Don't error on non-existent dependency in add_dependencies.
-set (CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
 
-# N.B./FIXME - after CMake 3.0 is our minimum, we should change many of the
-# add_definitions to add_compile_options. In newer cmake versions, the
-# former is designated for definitions (-Dblah) and the latter is for
-# compile flags (-Wno-foo).
-
-if (VERBOSE)
-    message (STATUS "Project source dir = ${PROJECT_SOURCE_DIR}")
+if (NOT CMAKE_BUILD_TYPE)
+    set (CMAKE_BUILD_TYPE "Release")
 endif ()
-message (STATUS "Project build dir   = ${CMAKE_BINARY_DIR}")
-message (STATUS "Project install dir = ${CMAKE_INSTALL_PREFIX}")
+
+message (STATUS "Configuring ${PROJECT_NAME} ${PROJECT_VERSION}")
+message (STATUS "CMake ${CMAKE_VERSION}")
+message (STATUS "CMake system           = ${CMAKE_SYSTEM}")
+message (STATUS "CMake system name      = ${CMAKE_SYSTEM_NAME}")
+message (STATUS "Project source dir     = ${PROJECT_SOURCE_DIR}")
+message (STATUS "Project build dir      = ${CMAKE_BINARY_DIR}")
+message (STATUS "Project install prefix = ${CMAKE_INSTALL_PREFIX}")
+message (STATUS "Configuration types    = ${CMAKE_CONFIGURATION_TYPES}")
+message (STATUS "Build type             = ${CMAKE_BUILD_TYPE}")
 
 if ("${PROJECT_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
     message (FATAL_ERROR "Not allowed to run in-source build!")
 endif ()
 
-if (NOT CMAKE_BUILD_TYPE)
-    set (CMAKE_BUILD_TYPE "Release")
-endif ()
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set (DEBUGMODE ON)
-endif ()
 
 option (CMAKE_USE_FOLDERS "Use the FOLDER target property to organize targets into folders." ON)
 mark_as_advanced (CMAKE_USE_FOLDERS)
@@ -51,22 +42,30 @@ endif ()
 
 include (GNUInstallDirs)
 
-set (CMAKE_MODULE_PATH
+list(APPEND CMAKE_MODULE_PATH
      "${PROJECT_SOURCE_DIR}/src/cmake/modules"
      "${PROJECT_SOURCE_DIR}/src/cmake")
 
-include (platform)
+# All the C++ and compiler related options and adjustments live here
 include (compiler)
+
+# Helpful functions and macros for our project
+include (colors)
+include (check_is_enabled)
+include (fancy_add_executable)
 
 
 option (VERBOSE "Print lots of messages while compiling" OFF)
-set (${PROJ_NAME}_NAMESPACE ${PROJ_NAME} CACHE STRING "Customized outer namespace base name (version will be added)")
+set (${PROJ_NAME}_NAMESPACE ${PROJECT_NAME} CACHE STRING "Customized outer namespace base name (version will be added)")
 option (BUILD_TOOLS "Build the command-line tools" ON)
 option (BUILD_TESTS "Build the unit tests" ON)
 
 # Set the default namespace
 set (PROJ_NAMESPACE "${${PROJ_NAME}_NAMESPACE}")
 set (PROJ_NAMESPACE_V "${PROJ_NAMESPACE}_v${PROJECT_VERSION_MAJOR}_${PROJECT_VERSION_MINOR}")
+if (OIIO_NAMESPACE_INCLUDE_PATCH)
+    set (PROJ_NAMESPACE_V "${PROJ_NAMESPACE_V}_${PROJECT_VERSION_PATCH}")
+endif ()
 message(STATUS "Setting Namespace to: ${PROJ_NAMESPACE_V}")
 
 set (SOVERSION ${PROJECT_VERSION_MAJORMINOR}
@@ -80,6 +79,7 @@ include (pythonutils)
 include_directories (
     BEFORE
     "${CMAKE_SOURCE_DIR}/src/include"
+    "${CMAKE_BINARY_DIR}/src/include"
     "${CMAKE_BINARY_DIR}/include"
   )
 
@@ -92,10 +92,11 @@ include (CTest)
 
 
 # Tell CMake to process the sub-directories
-add_subdirectory (src/include)
 add_subdirectory (src/libProto)
+add_subdirectory (src/include)
+
 if (BUILD_TOOLS)
-  add_subdirectory (src/protobin)
+    add_subdirectory (src/protobin)
 endif ()
 
 if (USE_PYTHON)
@@ -107,6 +108,12 @@ if (USE_QT AND Qt5_FOUND)
 endif ()
 
 #add_subdirectory (src/doc)
+
+# Last minute site-specific instructions, if they exist
+if (OIIO_SITE AND EXISTS "${PROJECT_SOURCE_DIR}/site/${SITE}/cmake/sitecustom.cmake")
+    include ("${PROJECT_SOURCE_DIR}/site/${SITE}/cmake/sitecustom.cmake")
+endif ()
+
 
 
 include (testutils)
@@ -152,15 +159,14 @@ set (CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
 set (CPACK_PACKAGE_VENDOR "${PROJECT_AUTHORS}")
 set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_NAME} is an open source library for reading and writing image file formats, a nice format-agnostic image viewer, and other image-related classes and utilities.")
 set (CPACK_PACKAGE_DESCRIPTION_FILE "${PROJECT_SOURCE_DIR}/src/doc/Description.txt")
-set (CPACK_PACKAGE_FILE_NAME ${PROJECT_NAME}-${PROJECT_VERSION}-${platform})
+set (CPACK_PACKAGE_FILE_NAME ${PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR})
 #SET (CPACK_PACKAGE_INSTALL_DIRECTORY "${PROJECT_SOURCE_DIR}")
 file (MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/cpack")
 file (COPY "${PROJECT_SOURCE_DIR}/LICENSE" DESTINATION "${CMAKE_BINARY_DIR}/cpack")
 file (RENAME "${CMAKE_BINARY_DIR}/cpack/LICENSE" "${CMAKE_BINARY_DIR}/cpack/License.txt")
 set (CPACK_RESOURCE_FILE_LICENSE "${CMAKE_BINARY_DIR}/cpack/License.txt")
 file (COPY "${PROJECT_SOURCE_DIR}/README.md" DESTINATION "${CMAKE_BINARY_DIR}/cpack")
-file (RENAME "${CMAKE_BINARY_DIR}/cpack/README.md" "${CMAKE_BINARY_DIR}/cpack/Readme.md")
-set (CPACK_RESOURCE_FILE_README "${CMAKE_BINARY_DIR}/cpack/Readme.md")
+set (CPACK_RESOURCE_FILE_README "${CMAKE_BINARY_DIR}/cpack/README.md")
 set (CPACK_RESOURCE_FILE_WELCOME "${PROJECT_SOURCE_DIR}/src/doc/Welcome.txt")
 #SET (CPACK_STRIP_FILES Do we need this?)
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")

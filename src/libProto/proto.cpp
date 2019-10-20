@@ -7,21 +7,18 @@
 #include <Proto/Proto.h>
 
 
-Proto_NAMESPACE_BEGIN
 
 void
-hello ()
+Proto::hello()
 {
     std::cout << "Hello, world\n";
+    std::cout.flush();
 }
 
 
 
 float
-add (float a, float b)
+Proto::add(float a, float b)
 {
     return a + b;
 }
-
-
-Proto_NAMESPACE_END

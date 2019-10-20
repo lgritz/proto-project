@@ -1,80 +1,121 @@
-###########################################################################
-# Find libraries
+# Copyright 2008-present Contributors to the OpenImageIO project.
+# SPDX-License-Identifier: BSD-3-Clause
+# https://github.com/OpenImageIO/oiio/blob/master/LICENSE.md
 
 # When not in VERBOSE mode, try to make things as quiet as possible
 if (NOT VERBOSE)
     set (Boost_FIND_QUIETLY true)
-    set (GLEW_FIND_QUIETLY true)
-    set (IlmBase_FIND_QUIETLY true)
-    set (OpenColorIO_FIND_QUIETLY true)
-    set (OpenCV_FIND_QUIETLY true)
-    set (OpenEXR_FIND_QUIETLY true)
-    set (OpenGL_FIND_QUIETLY true)
-    set (OpenImageIO_FIND_QUIETLY true)
     set (PkgConfig_FIND_QUIETLY true)
-    set (PugiXML_FIND_QUIETLY TRUE)
     set (PythonInterp_FIND_QUIETLY true)
     set (PythonLibs_FIND_QUIETLY true)
-    set (Qt5_FIND_QUIETLY true)
     set (Threads_FIND_QUIETLY true)
-    set (TIFF_FIND_QUIETLY true)
-    set (ZLIB_FIND_QUIETLY true)
 endif ()
 
-
-find_package (OpenImageIO 1.7)
-if (OPENIMAGEIO_FOUND)
-    include_directories ("${OPENIMAGEIO_INCLUDE_DIR}")
-    link_directories ("${OPENIMAGEIO_LIBRARY_DIRS}")
-    message (STATUS "Using OpenImageIO ${OPENIMAGEIO_VERSION}")
-endif ()
-
-
-option (USE_TIFF "Include TIFF support" OFF)
-if (USE_TIFF)
-    find_package (TIFF REQUIRED)
-    include_directories (${TIFF_INCLUDE_DIR})
-endif ()
+message (STATUS "${ColorBoldWhite}")
+message (STATUS "* Checking for dependencies...")
+message (STATUS "*   - Missing a dependency 'Package'?")
+message (STATUS "*     Try cmake -DPackage_ROOT=path or set environment var Package_ROOT=path")
+message (STATUS "*   - To exclude an optional dependency (even if found),")
+message (STATUS "*     -DUSE_Package=OFF or set environment var USE_Package=OFF ")
+message (STATUS "${ColorReset}")
 
 
-option (USE_ZLIB "Include zlib support" OFF)
-if (USE_ZLIB)
-    find_package (ZLIB REQUIRED)
-    include_directories (${ZLIB_INCLUDE_DIR})
-endif ()
-
-
-option (USE_OPENEXR "Include OpenEXR/IlmBase support" ON)
-if (USE_OPENEXR)
-    find_package (OpenEXR REQUIRED)
-    #OpenEXR 2.2 still has problems with importing ImathInt64.h unqualified
-    #thus need for ilmbase/OpenEXR
-    include_directories ("${OPENEXR_INCLUDE_DIR}"
-                         "${ILMBASE_INCLUDE_DIR}"
-                         "${ILMBASE_INCLUDE_DIR}/OpenEXR")
-    if (${OPENEXR_VERSION} VERSION_LESS 2.0.0)
-        # OpenEXR 1.x had weird #include dirctives, this is also necessary:
-        include_directories ("${OPENEXR_INCLUDE_DIR}/OpenEXR")
-    else ()
-        add_definitions (-DUSE_OPENEXR_VERSION2=1)
+# checked_find_package(pkgname ..) is a wrapper for find_package, with the
+# following extra features:
+#   * If either USE_<pkgname> or the all-uppercase USE_PKGNAME exists as
+#     either a CMake or environment variable, is nonempty by contains a
+#     non-true/nonnzero value, do not search for or use the package. The
+#     optional ENABLE <var> arguments allow you to override the name of the
+#     enabling variable. In other words, support for the dependency is
+#     presumed to be ON, unless turned off explicitly from one of these
+#     sources.
+#   * Print a message if the package is enabled but not found. This is based
+#     on ${pkgname}_FOUND or $PKGNNAME_FOUND.
+#   * Optional DEFINITIONS <string> are passed to add_definitions if the
+#     package is found.
+#   * Optional PRINT <list> is a list of variables that will be printed
+#     if the package is found, if VERBOSE is on.
+#   * Optional DEPS <list> is a list of hard dependencies; for each one, if
+#     dep_FOUND is not true, disable this package with an error message.
+#   * Optional ISDEPOF <downstream> names another package for which the
+#     present package is only needed because it's a dependency, and
+#     therefore if <downstream> is disabled, we don't bother with this
+#     package either.
+#
+# N.B. This needs to be a macro, not a function, because the find modules
+# will set(blah val PARENT_SCOPE) and we need that to be the global scope,
+# not merely the scope for this function.
+macro (checked_find_package pkgname)
+    cmake_parse_arguments(_pkg "" "ENABLE;ISDEPOF" "DEFINITIONS;PRINT;DEPS" ${ARGN})
+        # Arguments: <prefix> noValueKeywords singleValueKeywords multiValueKeywords argsToParse
+    string (TOUPPER ${pkgname} pkgname_upper)
+    if (NOT VERBOSE)
+        set (${pkgname}_FIND_QUIETLY true)
+        set (${pkgname_upper}_FIND_QUIETLY true)
     endif ()
-endif ()
+    set (_quietskip false)
+    check_is_enabled (${pkgname} _enable)
+    set (_disablereason "")
+    foreach (_dep ${_pkg_DEPS})
+        if (_enable AND NOT ${_dep}_FOUND)
+            set (_enable false)
+            set (_disablereason "(because ${_dep} was not found)")
+        endif ()
+    endforeach ()
+    if (_pkg_ISDEPOF)
+        check_is_enabled (${_pkg_ISDEPOF} _dep_enabled)
+        if (NOT _dep_enabled)
+            set (_enable false)
+            set (_quietskip true)
+        endif ()
+    endif ()
+    if (_enable)
+        find_package (${pkgname} ${_pkg_UNPARSED_ARGUMENTS})
+        if (${pkgname}_FOUND OR ${pkgname_upper}_FOUND)
+            foreach (_vervar ${pkgname_upper}_VERSION ${pkgname}_VERSION_STRING
+                             ${pkgname_upper}_VERSION_STRING)
+                if (NOT ${pkgname}_VERSION AND ${_vervar})
+                    set (${pkgname}_VERSION ${${_vervar}})
+                endif ()
+            endforeach ()
+            message (STATUS "${ColorGreen}Found ${pkgname} ${${pkgname}_VERSION} ${ColorReset}")
+            if (VERBOSE)
+                set (_vars_to_print ${pkgname}_INCLUDES ${pkgname_upper}_INCLUDES
+                                    ${pkgname_upper}_INCLUDE_DIRS
+                                    ${pkgname}_LIBRARIES ${pkgname_upper}_LIBRARIES
+                                    ${_pkg_PRINT})
+                list (REMOVE_DUPLICATES _vars_to_print)
+                foreach (_v IN LISTS _vars_to_print)
+                    if (NOT "${${_v}}" STREQUAL "")
+                        message (STATUS "    ${_v} = ${${_v}}")
+                    endif ()
+                endforeach ()
+            endif ()
+            add_definitions (${_pkg_DEFINITIONS})
+        else ()
+            message (STATUS "${ColorRed}${pkgname} library not found ${ColorReset}")
+            message (STATUS "${ColorRed}    Try setting ${pkgname}_ROOT ? ${ColorReset}")
+        endif()
+    else ()
+        if (NOT _quietskip)
+            message (STATUS "${ColorRed}Not using ${pkgname} -- disabled ${_disablereason} ${ColorReset}")
+        endif ()
+    endif ()
+endmacro()
 
 
 
 ###########################################################################
 # Boost setup
-if (NOT Boost_FIND_QUIETLY)
-    message (STATUS "BOOST_ROOT ${BOOST_ROOT}")
-endif ()
-if (NOT DEFINED Boost_ADDITIONAL_VERSIONS)
-    set (Boost_ADDITIONAL_VERSIONS "1.63" "1.62" "1.61" "1.60"
-                                   "1.59" "1.58" "1.57" "1.56" "1.55")
-endif ()
 if (LINKSTATIC)
     set (Boost_USE_STATIC_LIBS ON)
+    #add_definitions (-DBoost_USE_STATIC_LIBS=1)
+else ()
+    if (MSVC)
+        add_definitions (-DBOOST_ALL_DYN_LINK=1)
+        #add_definitions (-DOPENEXR_DLL)
+    endif ()
 endif ()
-set (Boost_USE_MULTITHREADED ON)
 if (BOOST_CUSTOM)
     set (Boost_FOUND true)
     # N.B. For a custom version, the caller had better set up the variables
@@ -84,145 +125,62 @@ else ()
     if (NOT USE_STD_REGEX)
         list (APPEND Boost_COMPONENTS regex)
     endif ()
-    find_package (Boost 1.53 REQUIRED
-                  COMPONENTS ${Boost_COMPONENTS})
-
-    # Try to figure out if this boost distro has Boost::python.  If we
-    # include python in the component list above, cmake will abort if
-    # it's not found.  So we resort to checking for the boost_python
-    # library's existance to get a soft failure.
-    find_library (my_boost_python_lib boost_python
-                  PATHS ${Boost_LIBRARY_DIRS} NO_DEFAULT_PATH)
-    mark_as_advanced (my_boost_python_lib)
-    if (NOT my_boost_python_lib AND Boost_SYSTEM_LIBRARY_RELEASE)
-        get_filename_component (my_boost_PYTHON_rel
-                                ${Boost_SYSTEM_LIBRARY_RELEASE} NAME
-                               )
-        string (REGEX REPLACE "^(lib)?(.+)_system(.+)$" "\\2_python\\3"
-                my_boost_PYTHON_rel ${my_boost_PYTHON_rel} )
-        find_library (my_boost_PYTHON_LIBRARY_RELEASE
-                      NAMES ${my_boost_PYTHON_rel} lib${my_boost_PYTHON_rel}
-                      HINTS ${Boost_LIBRARY_DIRS}
-                      NO_DEFAULT_PATH
-                     )
-        mark_as_advanced (my_boost_PYTHON_LIBRARY_RELEASE)
-    endif ()
-    if (NOT my_boost_python_lib AND Boost_SYSTEM_LIBRARY_DEBUG)
-        get_filename_component (my_boost_PYTHON_dbg
-                                ${Boost_SYSTEM_LIBRARY_DEBUG} NAME )
-        string (REGEX REPLACE "^(lib)?(.+)_system(.+)$" "\\2_python\\3"
-                my_boost_PYTHON_dbg ${my_boost_PYTHON_dbg} )
-        find_library (my_boost_PYTHON_LIBRARY_DEBUG
-                      NAMES ${my_boost_PYTHON_dbg} lib${my_boost_PYTHON_dbg}
-                      HINTS ${Boost_LIBRARY_DIRS}
-                      NO_DEFAULT_PATH )
-        mark_as_advanced (my_boost_PYTHON_LIBRARY_DEBUG)
-    endif ()
-    if (my_boost_python_lib OR
-        my_boost_PYTHON_LIBRARY_RELEASE OR my_boost_PYTHON_LIBRARY_DEBUG)
-        set (boost_PYTHON_FOUND ON)
-    else ()
-        set (boost_PYTHON_FOUND OFF)
-    endif ()
+    # The FindBoost.cmake interface is broken if it uses boost's installed
+    # cmake output (e.g. boost 1.70.0, cmake <= 3.14). Specifically it fails
+    # to set the expected variables printed below. So until that's fixed
+    # force FindBoost.cmake to use the original brute force path.
+    set (Boost_NO_BOOST_CMAKE ON)
+    checked_find_package (Boost 1.55 REQUIRED
+                       COMPONENTS ${Boost_COMPONENTS}
+                       PRINT Boost_INCLUDE_DIRS Boost_LIBRARIES
+                      )
 endif ()
-if (CMAKE_SYSTEM_NAME MATCHES "Linux" AND ${Boost_VERSION} GREATER 105499)
-    # On Linux, Boost 1.55 and higher seems to need to link against -lrt
+
+# On Linux, Boost 1.55 and higher seems to need to link against -lrt
+if (CMAKE_SYSTEM_NAME MATCHES "Linux"
+      AND ${Boost_VERSION} VERSION_GREATER_EQUAL 105500)
     list (APPEND Boost_LIBRARIES "rt")
 endif ()
-if (NOT Boost_FIND_QUIETLY)
-    message (STATUS "BOOST_ROOT ${BOOST_ROOT}")
-    message (STATUS "Boost found ${Boost_FOUND} ")
-    message (STATUS "Boost version      ${Boost_VERSION}")
-    message (STATUS "Boost include dirs ${Boost_INCLUDE_DIRS}")
-    message (STATUS "Boost library dirs ${Boost_LIBRARY_DIRS}")
-    message (STATUS "Boost libraries    ${Boost_LIBRARIES}")
-    message (STATUS "Boost python found ${boost_PYTHON_FOUND}")
-endif ()
-if (NOT boost_PYTHON_FOUND)
-    # If Boost python components were not found, turn off all python support.
-    message (STATUS "Boost python support not found -- will not build python components!")
-    if (APPLE AND USE_PYTHON)
-        message (STATUS "   If your Boost is from Macports, you need the +python26 variant to get Python support.")
-    endif ()
-    set (USE_PYTHON OFF)
-    set (PYTHONLIBS_FOUND OFF)
-endif ()
+
 include_directories (SYSTEM "${Boost_INCLUDE_DIRS}")
 link_directories ("${Boost_LIBRARY_DIRS}")
 
+# end Boost setup
+###########################################################################
 
-option (USE_OPENGL "Include OpenGL support" OFF)
-if (USE_OPENGL)
-    find_package (OpenGL)
-    if (NOT OpenGL_FIND_QUIETLY)
-        message (STATUS "OPENGL_FOUND=${OPENGL_FOUND} USE_OPENGL=${USE_OPENGL}")
-    endif ()
-    find_package (GLEW)
+
+checked_find_package (OpenImageIO 2.0 REQUIRED)
+if (OPENIMAGEIO_FOUND)
+    include_directories ("${OPENIMAGEIO_INCLUDES}")
 endif ()
 
+checked_find_package (TIFF 4.0 REQUIRED)
+checked_find_package (ZLIB REQUIRED)
 
-option (USE_OCIO "Include OpenColorIO support" OFF)
-if (USE_OCIO)
-    # If 'OCIO_PATH' not set, use the env variable of that name if available
-    if (NOT OCIO_PATH)
-        if (NOT $ENV{OCIO_PATH} STREQUAL "")
-            set (OCIO_PATH $ENV{OCIO_PATH})
-        endif ()
-    endif()
-
-    find_package (OpenColorIO)
-
-    if (OCIO_FOUND)
-        include_directories (${OCIO_INCLUDES})
-        add_definitions ("-DUSE_OCIO=1")
-    else ()
-        message (STATUS "Skipping OpenColorIO support")
-    endif ()
-
-    if (LINKSTATIC)
-        find_library (TINYXML_LIBRARY NAMES tinyxml)
-        if (TINYXML_LIBRARY)
-            set (OCIO_LIBRARIES ${OCIO_LIBRARIES} ${TINYXML_LIBRARY})
-        endif ()
-        find_library (YAML_LIBRARY NAMES yaml-cpp)
-        if (YAML_LIBRARY)
-            set (OCIO_LIBRARIES ${OCIO_LIBRARIES} ${YAML_LIBRARY})
-        endif ()
-        find_library (LCMS2_LIBRARY NAMES lcms2)
-        if (LCMS2_LIBRARY)
-            set (OCIO_LIBRARIES ${OCIO_LIBRARIES} ${LCMS2_LIBRARY})
-        endif ()
-    endif ()
+# IlmBase & OpenEXR
+checked_find_package (OpenEXR 2.0 REQUIRED)
+# We use Imath so commonly, may as well include it everywhere.
+include_directories ("${OPENEXR_INCLUDES}" "${ILMBASE_INCLUDES}"
+                     "${ILMBASE_INCLUDES}/OpenEXR")
+if (CMAKE_COMPILER_IS_CLANG AND OPENEXR_VERSION VERSION_LESS 2.3)
+    # clang C++ >= 11 doesn't like 'register' keyword in old exr headers
+    add_compile_options (-Wno-deprecated-register)
 endif ()
 
-
-option (USE_PUGIXML "Use PugiXML" OFF)
-if (USE_PUGIXML)
-    find_package (PugiXML REQUIRED)
-    include_directories (BEFORE "${PUGIXML_INCLUDE_DIR}")
-endif()
+checked_find_package (OpenGL)
+checked_find_package (PugiXML)
 
 
 ###########################################################################
 # Qt setup
-option (USE_QT "Include Qt support" ON)
-option (USE_OPENGL "Include OpenGL support" OFF)
-if (USE_QT)
-    set (qt5_modules Core Gui Widgets)
-    if (USE_OPENGL)
-        list (APPEND qt5_modules OpenGL)
-    endif ()
-    find_package (Qt5 COMPONENTS ${qt5_modules})
+set (qt5_modules Core Gui Widgets)
+if (OPENGL_FOUND)
+    list (APPEND qt5_modules OpenGL)
 endif ()
-if (USE_QT AND Qt5_FOUND)
-    if (NOT Qt5_FIND_QUIETLY)
-        message (STATUS "Qt5_FOUND=${Qt5_FOUND}")
-    endif ()
-else ()
-    message (STATUS "No Qt5 -- skipping components that need Qt5.")
-    if (USE_QT AND NOT Qt5_FOUND AND APPLE)
-        message (STATUS "If you think you installed qt5 with Homebrew and it still doesn't work,")
-        message (STATUS "try:   export PATH=/usr/local/opt/qt5/bin:$PATH")
-    endif ()
+option (USE_QT "Use Qt if found" ON)
+checked_find_package (Qt5 COMPONENTS ${qt5_modules})
+if (USE_QT AND NOT Qt5_FOUND AND APPLE)
+    message (STATUS "  If you think you installed qt5 with Homebrew and it still doesn't work,")
+    message (STATUS "  try:   export PATH=/usr/local/opt/qt5/bin:$PATH")
 endif ()
 

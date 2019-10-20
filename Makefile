@@ -2,17 +2,18 @@
 #
 # This is the master makefile.
 # Here we put all the top-level make targets, platform-independent
-# rules, etc.
+# rules, etc. This is just a fancy wrapper around cmake, but for many
+# people, it's a lot simpler to just type "make" and have everything
+# happen automatically.
 #
 # Run 'make help' to list helpful targets.
 #
 #########################################################################
 
 
-.PHONY: all debug profile clean realclean doxygen nuke
+.PHONY: all debug profile clean realclean nuke doxygen
 
 working_dir	:= ${shell pwd}
-INSTALLDIR	=${working_dir}
 
 # Figure out which architecture we're on
 include ${working_dir}/src/make/detectplatform.mk
@@ -28,10 +29,11 @@ endif
 
 MY_MAKE_FLAGS ?=
 MY_NINJA_FLAGS ?=
-MY_CMAKE_FLAGS ?=
+MY_CMAKE_FLAGS += -g3
 BUILDSENTINEL ?= Makefile
 NINJA ?= ninja
 CMAKE ?= cmake
+CMAKE_BUILD_TYPE ?= Release
 
 # Site-specific build instructions
 ifndef SITE
@@ -65,59 +67,63 @@ ifneq (${VERBOSE},0)
 endif
 $(info SITE = ${SITE})
 $(info dist_dir = ${dist_dir})
-$(info INSTALLDIR = ${INSTALLDIR})
+$(info INSTALL_PREFIX = ${INSTALL_PREFIX})
 endif
 
 ifneq (${NAMESPACE},)
 MY_CMAKE_FLAGS += -DNAMESPACE:STRING=${NAMESPACE}
 endif
 
-ifneq (${HIDE_SYMBOLS},)
-MY_CMAKE_FLAGS += -DHIDE_SYMBOLS:BOOL=${HIDE_SYMBOLS}
-endif
-
 ifneq (${USE_PYTHON},)
 MY_CMAKE_FLAGS += -DUSE_PYTHON:BOOL=${USE_PYTHON}
-endif
-
-ifneq (${USE_PYTHON3},)
-MY_CMAKE_FLAGS += -DUSE_PYTHON3:BOOL=${USE_PYTHON3}
 endif
 
 ifneq (${PYTHON_VERSION},)
 MY_CMAKE_FLAGS += -DPYTHON_VERSION:STRING=${PYTHON_VERSION}
 endif
 
-ifneq (${OPENEXR_HOME},)
-MY_CMAKE_FLAGS += -DOPENEXR_HOME:STRING=${OPENEXR_HOME}
+ifneq (${PYLIB_LIB_PREFIX},)
+MY_CMAKE_FLAGS += -DPYLIB_LIB_PREFIX:BOOL=${PYLIB_LIB_PREFIX}
 endif
 
-ifneq (${ILMBASE_HOME},)
-MY_CMAKE_FLAGS += -DILMBASE_HOME:STRING=${ILMBASE_HOME}
+ifneq (${PYLIB_INCLUDE_SONAME},)
+MY_CMAKE_FLAGS += -DPYLIB_INCLUDE_SONAME:BOOL=${PYLIB_INCLUDE_SONAME}
 endif
 
-ifneq (${BOOST_HOME},)
-MY_CMAKE_FLAGS += -DBOOST_ROOT:STRING=${BOOST_HOME}
+ifneq (${USE_EXTERNAL_PUGIXML},)
+MY_CMAKE_FLAGS += -DUSE_EXTERNAL_PUGIXML:BOOL=${USE_EXTERNAL_PUGIXML} -DPUGIXML_HOME=${PUGIXML_HOME}
+endif
+
+ifneq (${OPENEXR_ROOT},)
+MY_CMAKE_FLAGS += -DOPENEXR_ROOT:STRING=${OPENEXR_ROOT}
+endif
+
+ifneq (${ILMBASE_ROOT},)
+MY_CMAKE_FLAGS += -DILMBASE_ROOT:STRING=${ILMBASE_ROOT}
+endif
+
+ifneq (${NUKE_VERSION},)
+MY_CMAKE_FLAGS += -DNUKE_VERSION:STRING=${NUKE_VERSION}
 endif
 
 ifneq (${STOP_ON_WARNING},)
 MY_CMAKE_FLAGS += -DSTOP_ON_WARNING:BOOL=${STOP_ON_WARNING}
 endif
 
-ifneq (${BUILDSTATIC},)
-MY_CMAKE_FLAGS += -DBUILDSTATIC:BOOL=${BUILDSTATIC}
+ifneq (${BUILD_SHARED_LIBS},)
+MY_CMAKE_FLAGS += -DBUILD_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS}
 endif
 
 ifneq (${LINKSTATIC},)
 MY_CMAKE_FLAGS += -DLINKSTATIC:BOOL=${LINKSTATIC}
 endif
 
-ifneq (${BUILD_TESTS},)
-MY_CMAKE_FLAGS += -DBUILD_TESTS:BOOL=${BUILD_TESTS}
-endif
-
 ifneq (${BUILD_TOOLS},)
 MY_CMAKE_FLAGS += -DBUILD_TOOLS:BOOL=${BUILD_TOOLS}
+endif
+
+ifneq (${BUILD_TESTS},)
+MY_CMAKE_FLAGS += -DBUILD_TESTS:BOOL=${BUILD_TESTS}
 endif
 
 ifneq (${SOVERSION},)
@@ -125,11 +131,11 @@ MY_CMAKE_FLAGS += -DSOVERSION:STRING=${SOVERSION}
 endif
 
 ifdef DEBUG
-MY_CMAKE_FLAGS += -DCMAKE_BUILD_TYPE:STRING=Debug
+CMAKE_BUILD_TYPE=Debug
 endif
 
 ifdef PROFILE
-MY_CMAKE_FLAGS += -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo
+CMAKE_BUILD_TYPE=RelWithDebInfo
 endif
 
 ifneq (${MYCC},)
@@ -140,11 +146,19 @@ MY_CMAKE_FLAGS += -DCMAKE_CXX_COMPILER:STRING="${MYCXX}"
 endif
 
 ifneq (${USE_CPP},)
-MY_CMAKE_FLAGS += -DUSE_CPP=${USE_CPP}
+MY_CMAKE_FLAGS += -DCMAKE_CXX_STANDARD=${USE_CPP}
+endif
+
+ifneq (${CMAKE_CXX_STANDARD},)
+MY_CMAKE_FLAGS += -DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}
 endif
 
 ifneq (${USE_LIBCPLUSPLUS},)
 MY_CMAKE_FLAGS += -DUSE_LIBCPLUSPLUS:BOOL=${USE_LIBCPLUSPLUS}
+endif
+
+ifneq (${GLIBCXX_USE_CXX11_ABI},)
+MY_CMAKE_FLAGS += -DGLIBCXX_USE_CXX11_ABI=${GLIBCXX_USE_CXX11_ABI}
 endif
 
 ifneq (${EXTRA_CPP_ARGS},)
@@ -168,8 +182,9 @@ MY_CMAKE_FLAGS += -G Ninja
 BUILDSENTINEL := build.ninja
 endif
 
-ifneq (${CODECOV},)
-MY_CMAKE_FLAGS += -DCMAKE_BUILD_TYPE:STRING=Debug -DCODECOV:BOOL=${CODECOV}
+ifeq (${CODECOV},1)
+CMAKE_BUILD_TYPE=Debug
+MY_CMAKE_FLAGS += -DCODECOV:BOOL=${CODECOV}
 endif
 
 ifneq (${SANITIZE},)
@@ -190,6 +205,18 @@ ifneq (${CLANG_TIDY_FIX},)
   MY_NINJA_FLAGS += -j 1
   # N.B. when fixing, you don't want parallel jobs!
 endif
+
+ifneq (${CLANG_FORMAT_INCLUDES},)
+  MY_CMAKE_FLAGS += -DCLANG_FORMAT_INCLUDES:STRING=${CLANG_FORMAT_INCLUDES}
+endif
+ifneq (${CLANG_FORMAT_EXCLUDES},)
+  MY_CMAKE_FLAGS += -DCLANG_FORMAT_EXCLUDES:STRING=${CLANG_FORMAT_EXCLUDES}
+endif
+
+ifneq (${BUILD_MISSING_DEPS},)
+MY_CMAKE_FLAGS += -DBUILD_MISSING_DEPS:BOOL=${BUILD_MISSING_DEPS}
+endif
+
 
 #$(info MY_CMAKE_FLAGS = ${MY_CMAKE_FLAGS})
 #$(info MY_MAKE_FLAGS = ${MY_MAKE_FLAGS})
@@ -212,74 +239,65 @@ debug:
 profile:
 	${MAKE} PROFILE=1 --no-print-directory
 
-# 'make cmakesetup' constructs the build directory and runs 'cmake' there,
+# 'make config' constructs the build directory and runs 'cmake' there,
 # generating makefiles to build the project.  For speed, it only does this when
 # ${build_dir}/Makefile doesn't already exist, in which case we rely on the
 # cmake generated makefiles to regenerate themselves when necessary.
-cmakesetup:
+config:
 	@ (if [ ! -e ${build_dir}/${BUILDSENTINEL} ] ; then \
 		${CMAKE} -E make_directory ${build_dir} ; \
 		cd ${build_dir} ; \
-		${CMAKE} -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \
-			${MY_CMAKE_FLAGS} -DBOOST_ROOT=${BOOST_HOME} \
-			../.. ; \
+		${CMAKE} -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE} \
+			 -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \
+			 ${MY_CMAKE_FLAGS} ../.. ; \
 	 fi)
 
-ifeq (${USE_NINJA},1)
 
-# 'make cmake' does a basic build (after first setting it up)
-cmake: cmakesetup
-	@ ( cd ${build_dir} ; ${NINJA} ${MY_NINJA_FLAGS} )
+# 'make build' does a basic build (after first setting it up)
+build: config
+	@ ( cd ${build_dir} ; \
+	    ${CMAKE} --build . --config ${CMAKE_BUILD_TYPE} \
+	  )
 
-# 'make cmakeinstall' builds everthing and installs it in 'dist'.
+# 'make install' builds everthing and installs it in 'dist'.
 # Suppress pointless output from docs installation.
-cmakeinstall: cmake
-	@ ( cd ${build_dir} ; ${NINJA} ${MY_NINJA_FLAGS} install | grep -v '^-- \(Installing\|Up-to-date\|Set runtime path\)' )
+install: build
+	@ ( cd ${build_dir} ; \
+	    ${CMAKE} --build . --target install --config ${CMAKE_BUILD_TYPE} | grep -v '^-- \(Installing\|Up-to-date\|Set runtime path\)' \
+	  )
 
 # 'make package' builds everything and then makes an installable package
 # (platform dependent -- may be .tar.gz, .sh, .dmg, .rpm, .deb. .exe)
-package: cmakeinstall
-	@ ( cd ${build_dir} ; ${NINJA} ${MY_NINJA_FLAGS} package )
+package: install
+	@ ( cd ${build_dir} ; \
+	    ${CMAKE} --build . --target package --config ${CMAKE_BUILD_TYPE} \
+	  )
 
 # 'make package_source' makes an installable source package
 # (platform dependent -- may be .tar.gz, .sh, .dmg, .rpm, .deb. .exe)
-package_source: cmakeinstall
-	@ ( cd ${build_dir} ; ${NINJA} ${MY_NINJA_FLAGS} package_source )
+package_source: install
+	@ ( cd ${build_dir} ; \
+	    ${CMAKE} --build . --target package_source --config ${CMAKE_BUILD_TYPE} \
+	  )
 
-else
+# 'make clang-format' runs clang-format on all source files (if it's installed)
+clang-format: config
+	@ ( cd ${build_dir} ; \
+	    ${CMAKE} --build . --target clang-format --config ${CMAKE_BUILD_TYPE} \
+	  )
 
-# 'make cmake' does a basic build (after first setting it up)
-cmake: cmakesetup
-	@ ( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} )
 
-# 'make cmakeinstall' builds everthing and installs it in 'dist'.
-# Suppress pointless output from docs installation.
-cmakeinstall: cmake
-	@ ( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} install | grep -v '^-- \(Installing\|Up-to-date\|Set runtime path\)' )
-
-# 'make package' builds everything and then makes an installable package
-# (platform dependent -- may be .tar.gz, .sh, .dmg, .rpm, .deb. .exe)
-package: cmakeinstall
-	@ ( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} package )
-
-# 'make package_source' makes an installable source package
-# (platform dependent -- may be .tar.gz, .sh, .dmg, .rpm, .deb. .exe)
-package_source: cmakeinstall
-	@ ( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} package_source )
-
-endif
-
-# 'make dist' is just a synonym for 'make cmakeinstall'
-dist : cmakeinstall
+# 'make dist' is just a synonym for 'make install'
+dist : install
 
 TEST_FLAGS += --force-new-ctest-process --output-on-failure
 
 # 'make test' does a full build and then runs all tests
-test: cmake
+test: build
 	@ ${CMAKE} -E cmake_echo_color --switch=$(COLOR) --cyan "Running tests ${TEST_FLAGS}..."
 	@ # if [ "${CODECOV}" == "1" ] ; then lcov -b ${build_dir} -d ${build_dir} -z ; rm -rf ${build_dir}/cov ; fi
 	@ ( cd ${build_dir} ; PYTHONPATH=${PWD}/${build_dir}/src/python ctest -E broken ${TEST_FLAGS} )
-	@ ( if [ "${CODECOV}" == "1" ] ; then \
+	@ ( if [[ "${CODECOV}" == "1" ]] ; then \
 	      cd ${build_dir} ; \
 	      lcov -b . -d . -c -o cov.info ; \
 	      lcov --remove cov.info "/usr*" -o cov.info ; \
@@ -288,7 +306,7 @@ test: cmake
 
 # 'make testall' does a full build and then runs all tests (even the ones
 # that are expected to fail on some platforms)
-testall: cmake
+testall: build
 	${CMAKE} -E cmake_echo_color --switch=$(COLOR) --cyan "Running all tests ${TEST_FLAGS}..."
 	( cd ${build_dir} ; PYTHONPATH=${PWD}/${build_dir}/src/python ctest ${TEST_FLAGS} )
 
@@ -315,15 +333,18 @@ doxygen:
 # 'make help' prints important make targets
 help:
 	@echo "Targets:"
-	@echo "  make              Build optimized binaries and libraries"
-	@echo "  make debug        Build unoptimized with symbols"
-	@echo "  make profile      Build for profiling"
+	@echo "  make              Build and install optimized binaries and libraries"
+	@echo "  make install      Build and install optimized binaries and libraries"
+	@echo "  make build        Build only (no install) optimized binaries and libraries"
+	@echo "  make config       Just configure cmake, don't build"
+	@echo "  make debug        Build and install unoptimized with symbols"
+	@echo "  make profile      Build and install for profiling"
 	@echo "  make clean        Remove the temporary files in ${build_dir}"
 	@echo "  make realclean    Remove both ${build_dir} AND ${dist_dir}"
 	@echo "  make nuke         Remove ALL of build and dist (not just ${platform})"
 	@echo "  make test         Run tests"
 	@echo "  make testall      Run all tests, even broken ones"
-	@echo "  make doxygen      Build the Doxygen docs in ${top_build_dir}/doxygen"
+	@echo "  make clang-format Run clang-format on all the source files"
 	@echo ""
 	@echo "Helpful modifiers:"
 	@echo "  C++ compiler and build process:"
@@ -331,8 +352,9 @@ help:
 	@echo "      STOP_ON_WARNING=0        Do not stop building if compiler warns"
 	@echo "      SITE=xx                  Use custom site build mods"
 	@echo "      MYCC=xx MYCXX=yy         Use custom compilers"
-	@echo "      USE_CPP=14               Compile in C++14 mode (default is C++11)"
-	@echo "      USE_LIBCPLUSPLUS=1       Use clang libc++"
+	@echo "      CMAKE_CXX_STANDARD=14    Compile in C++14 mode (default is C++11)"
+	@echo "      USE_LIBCPLUSPLUS=1       For clang, use libc++"
+	@echo "      GLIBCXX_USE_CXX11_ABI=1  For gcc, use the new string ABI"
 	@echo "      EXTRA_CPP_ARGS=          Additional args to the C++ command"
 	@echo "      USE_NINJA=1              Set up Ninja build (instead of make)"
 	@echo "      USE_CCACHE=0             Disable ccache (even if available)"
@@ -340,27 +362,34 @@ help:
 	@echo "      SANITIZE=name1,...       Enable sanitizers (address, leak, thread)"
 	@echo "      CLANG_TIDY=1             Run clang-tidy on all source (can be modified"
 	@echo "                                  by CLANG_TIDY_ARGS=... and CLANG_TIDY_FIX=1"
+	@echo "      CLANG_FORMAT_INCLUDES=... CLANG_FORMAT_EXCLUDES=..."
+	@echo "                               Customize files for 'make clang-format'"
 	@echo "  Linking and libraries:"
-	@echo "      HIDE_SYMBOLS=1           Hide symbols not in the public API"
 	@echo "      SOVERSION=nn             Include the specifed major version number "
 	@echo "                                  in the shared object metadata"
-	@echo "      BUILDSTATIC=1            Build static library instead of shared"
+	@echo "      BUILD_SHARED_LIBS=0      Build static library instead of shared"
 	@echo "      LINKSTATIC=1             Link with static external libs when possible"
+	@echo "  Dependency hints:"
+	@echo "      For each dependeny Foo, defining ENABLE_Foo=0 disables it, even"
+	@echo "      if found. And you can hint where to find it with Foo_ROOT=path"
+	@echo "      Note that it is case sensitive!"
 	@echo "  Finding and Using Dependencies:"
-	@echo "      BOOST_HOME=path          Custom Boost installation"
-	@echo "      OPENEXR_HOME=path        Custom OpenEXR installation"
-	@echo "      ILMBASE_HOME=path        Custom IlmBase installation"
+	@echo "      BOOST_ROOT=path          Custom Boost installation"
+	@echo "      OPENEXR_ROOT=path        Custom OpenEXR installation"
+	@echo "      ILMBASE_ROOT=path        Custom IlmBase installation"
+	@echo "      USE_EXTERNAL_PUGIXML=1   Use the system PugiXML, not the one in OIIO"
 	@echo "      USE_QT=0                 Skip anything that needs Qt"
 	@echo "      USE_PYTHON=0             Don't build the Python binding"
-	@echo "      USE_PYTHON3=1            If 1, try to build against Python3, not 2.x"
 	@echo "      PYTHON_VERSION=2.6       Specify the Python version"
 	@echo "  Build-time options:"
+	@echo "      INSTALL_PREFIX=path      Set installation prefix (default: ./${INSTALL_PREFIX_BRIEF})"
 	@echo "      NAMESPACE=name           Override namespace base name"
 	@echo "      BUILD_TOOLS=0            Skip building the command-line tools"
-	@echo "      BUILD_TESTS=0            Skip building the unit tests"
-	@echo "      USE_SIMD=arch            Build with SIMD support (choices: 0, sse2, sse3,"
-	@echo "                                  ssse3, sse4.1, sse4.2, f16c, avx, avx2"
-	@echo "                                  comma-separated ok)"
+	@echo "      BUILD_TESTS=0 	      Skip building the unit tests"
+	@echo "      USE_SIMD=arch            Build with SIMD support (comma-separated choices:"
+	@echo "                                  0, sse2, sse3, ssse3, sse4.1, sse4.2, f16c,"
+	@echo "                                  avx, avx2, avx512f)"
+	@echo "      BUILD_MISSING_DEPS=1     Try to download/build missing dependencies"
 	@echo "  make test, extra options:"
 	@echo "      TEST=regex               Run only tests matching the regex"
 	@echo ""

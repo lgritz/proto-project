@@ -1,9 +1,4 @@
 ###########################################################################
-# Fonts are not available yet.
-option (INSTALL_DOCS "Install documentation" ON)
-option (INSTALL_FONTS "Install default fonts" OFF)
-
-###########################################################################
 # Rpath handling at the install step
 set (MACOSX_RPATH ON)
 if (CMAKE_SKIP_RPATH)
@@ -15,9 +10,9 @@ if (CMAKE_SKIP_RPATH)
     set (CMAKE_SKIP_RPATH FALSE)
     unset (CMAKE_INSTALL_RPATH)
 else ()
-    # the RPATH to be used when installing
-    set (CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_FULL_LIBDIR}")
-
+    if (NOT CMAKE_INSTALL_RPATH)
+        set (CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_FULL_LIBDIR}")
+    endif ()
     # add the automatically determined parts of the RPATH that
     # point to directories outside the build tree to the install RPATH
     set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)

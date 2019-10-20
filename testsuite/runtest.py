@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import glob
 import sys
@@ -40,11 +42,38 @@ path = os.path.normpath (path)
 
 tmpdir = "."
 tmpdir = os.path.abspath (tmpdir)
+redirect = " >> out.txt "
 
+def oiio_relpath (path, start=os.curdir):
+    "Wrapper around os.path.relpath which always uses '/' as the separator."
+    p = os.path.relpath (path, start)
+    return p if sys.platform != "win32" else p.replace ('\\', '/')
+
+# Try to figure out where some key things are. Go by env variables set by
+# the cmake tests, but if those aren't set, assume somebody is running
+# this script by hand from inside build/PLATFORM/testsuite/TEST and that
+# the rest of the tree has the standard layout.
+TESTSUITE_ROOT = oiio_relpath(os.getenv('TESTSUITE_ROOT', '../../../../testsuite'))
 refdir = "ref/"
 refdirlist = [ refdir ]
-parent = "../../../../../"
-test_source_dir = "../../../../testsuite/" + os.path.basename(os.path.abspath(srcdir))
+mytest = os.path.split(os.path.abspath(os.getcwd()))[-1]
+if str(mytest).endswith('.batch') :
+    mytest = mytest.split('.')[0]
+test_source_dir = os.getenv('OIIO_TESTSUITE_SRC',
+                            os.path.join(TESTSUITE_ROOT, mytest))
+colorconfig_file = os.path.join(TESTSUITE_ROOT,
+                                "common", "OpenColorIO", "nuke-default", "config.ocio")
+
+# Swap the relative diff lines if the test suite is not being run via Makefile
+if TESTSUITE_ROOT != "../../../../testsuite":
+    def replace_relative(lines):
+        imgdir = None
+        for i in range(len(lines)):
+            lines[i] = lines[i].replace("../../../../testsuite", TESTSUITE_ROOT)
+        return lines
+else:
+    replace_relative = None
+
 
 command = ""
 outputs = [ "out.txt" ]    # default
@@ -57,14 +86,11 @@ anymatch = False
 image_extensions = [ ".tif", ".tx", ".exr", ".jpg", ".png", ".rla",
                      ".dpx", ".iff", ".psd" ]
 
-compile_osl_files = True
-splitsymbol = ';'
-
-#print ("srcdir = " + srcdir)
-#print ("tmpdir = " + tmpdir)
-#print ("path = " + path)
-#print ("refdir = " + refdir)
-print ("test source dir = " + test_source_dir)
+# print ("srcdir = " + srcdir)
+# print ("tmpdir = " + tmpdir)
+# print ("path = " + path)
+# print ("refdir = " + refdir)
+# print ("test source dir = " + test_source_dir)
 
 if platform.system() == 'Windows' :
     if not os.path.exists("./ref") :
@@ -76,14 +102,31 @@ if platform.system() == 'Windows' :
     # if not os.path.exists("../common") :
     #     shutil.copytree ("../../../testsuite/common", "..")
 else :
+    def newsymlink(src, dst):
+        print("newsymlink", src, dst)
+        # os.path.exists returns False for broken symlinks, so remove if thats the case
+        if os.path.islink(dst):
+            os.remove(dst)
+        os.symlink (src, dst)
     if not os.path.exists("./ref") :
-        os.symlink (os.path.join (test_source_dir, "ref"), "./ref")
+        newsymlink (os.path.join (test_source_dir, "ref"), "./ref")
     if os.path.exists (os.path.join (test_source_dir, "src")) and not os.path.exists("./src") :
-        os.symlink (os.path.join (test_source_dir, "src"), "./src")
+        newsymlink (os.path.join (test_source_dir, "src"), "./src")
     if not os.path.exists("./data") :
-        os.symlink (test_source_dir, "./data")
-    if not os.path.exists("../common") and os.path.exists("../../../testsuite/common") :
-        os.symlink ("../../../testsuite/common", "../common")
+        newsymlink (test_source_dir, "./data")
+
+
+# Disable this test on Travis when using leak sanitizer, because the error
+# condition makes a leak we can't stop, but that's ok.
+import os
+if (os.getenv("TRAVIS") and (os.getenv("SANITIZE") in ["leak","address"])
+    and os.path.exists(os.path.join (test_source_dir,"TRAVIS_SKIP_LSAN"))) :
+    sys.exit (0)
+
+pythonbin = 'python'
+if os.getenv("PYTHON_VERSION") :
+    pythonbin += os.getenv("PYTHON_VERSION")
+#print ("pythonbin = ", pythonbin)
 
 
 ###########################################################################
@@ -99,8 +142,10 @@ def text_diff (fromfile, tofile, diff_file=None):
     try:
         fromdate = time.ctime (os.stat (fromfile).st_mtime)
         todate = time.ctime (os.stat (tofile).st_mtime)
-        fromlines = open (fromfile, 'rU').readlines()
-        tolines   = open (tofile, 'rU').readlines()
+        fromlines = open (fromfile, 'r').readlines()
+        tolines   = open (tofile, 'r').readlines()
+        if replace_relative:
+            tolines = replace_relative(tolines)
     except:
         print ("Unexpected error:", sys.exc_info()[0])
         return -1
@@ -143,8 +188,8 @@ def oiio_relpath (path, start=os.curdir):
 
 
 def oiio_app (app):
-    if os.environ.__contains__('OPENIMAGEIOHOME') :
-        return os.path.join (os.environ['OPENIMAGEIOHOME'], "bin", app) + " "
+    if os.environ.__contains__('OpenImageIO_ROOT') :
+        return os.path.join (os.environ['OpenImageIO_ROOT'], "bin", app) + " "
     else :
         return app + " "
 
@@ -159,17 +204,17 @@ def oiiotool (args) :
 # the file "out.txt".  We allow a small number of pixels to have up to
 # 1 LSB (8 bit) error, it's very hard to make different platforms and
 # compilers always match to every last floating point bit.
-def oiiodiff (fileA, fileB, extraargs="", silent=True, concat=True) :
+def diff_command (fileA, fileB, extraargs="", silent=False, concat=True) :
     command = (oiio_app("idiff") + "-a"
                + " -fail " + str(failthresh)
                + " -failpercent " + str(failpercent)
                + " -hardfail " + str(hardfail)
                + " -warn " + str(2*failthresh)
                + " -warnpercent " + str(failpercent)
-               + " " + extraargs + " " + oiio_relpath(fileA,tmpdir)
+               + " " + extraargs + " " + oiio_relpath(fileA,tmpdir) 
                + " " + oiio_relpath(fileB,tmpdir))
     if not silent :
-        command += " >> out.txt 2>&1 "
+        command += redirect
     if concat:
         command += " ;\n"
     return command
@@ -221,39 +266,36 @@ def checkref (name, refdirlist) :
 # in 'ref/'.  If all outputs match their reference copies, return 0
 # to pass.  If any outputs do not match their references return 1 to
 # fail.
-def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
+def runtest (command, outputs, failureok=0) :
+    err = 0
 #    print ("working dir = " + tmpdir)
     os.chdir (srcdir)
     open ("out.txt", "w").close()    # truncate out.txt
+    open ("out.err.txt", "w").close()    # truncate out.txt
+    if os.path.isfile("debug.log") :
+        os.remove ("debug.log")
 
     if options.path != "" :
         sys.path = [options.path] + sys.path
-    print "command = " + command
-
-    if (platform.system () == 'Windows'):
-        # Replace the /$<CONFIGURATION>/ component added in oiio_app
-        oiio_app_replace_str = "/"
-        if options.devenv_config != "":
-            oiio_app_replace_str = '/' + options.devenv_config + '/'
-        command = command.replace ("/$<CONFIGURATION>/", oiio_app_replace_str)
+    print ("command = " + command)
 
     test_environ = None
     if (platform.system () == 'Windows') and (options.solution_path != "") and \
        (os.path.isdir (options.solution_path)):
         test_environ = os.environ
-        libOIIO_path = options.solution_path + "\\libOpenImageIO\\"
+        libOIIO_args = [options.solution_path, "libOpenImageIO"]
         if options.devenv_config != "":
-            libOIIO_path = libOIIO_path + '\\' + options.devenv_config
+            libOIIO_args.append (options.devenv_config)
+        libOIIO_path = os.path.normpath (os.path.join (*libOIIO_args))
         test_environ["PATH"] = libOIIO_path + ';' + test_environ["PATH"]
 
-    for sub_command in command.split(splitsymbol):
+    for sub_command in [c.strip() for c in command.split(';') if c.strip()]:
         cmdret = subprocess.call (sub_command, shell=True, env=test_environ)
         if cmdret != 0 and failureok == 0 :
-            print "#### Error: this command failed: ", sub_command
-            print "FAIL"
-            return (1)
+            print ("#### Error: this command failed: ", sub_command)
+            print ("FAIL")
+            err = 1
 
-    err = 0
     for out in outputs :
         (prefix, extension) = os.path.splitext(out)
         (ok, testfile) = checkref (out, refdirlist)
@@ -276,15 +318,17 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
                 print (open(testfile,'r').read() + "<----------")
                 os.system ("ls -al " +out+" "+testfile)
                 print ("Diff was:\n-------")
-                print (open (out+".diff", 'rU').read())
+                print (open (out+".diff", 'r').read())
             if extension in image_extensions :
                 # If we failed to get a match for an image, send the idiff
                 # results to the console
                 os.system (diff_command (out, testfile, silent=False))
             if os.path.isfile("debug.log") and os.path.getsize("debug.log") :
                 print ("---   DEBUG LOG   ---\n")
+                #flog = open("debug.log", "r")
+                # print (flog.read())
                 with open("debug.log", "r") as flog :
-                    print flog.read()
+                    print (flog.read())
                 print ("--- END DEBUG LOG ---\n")
     return (err)
 
@@ -300,30 +344,15 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
 with open(os.path.join(test_source_dir,"run.py")) as f:
     code = compile(f.read(), "run.py", 'exec')
     exec (code)
-# if os.path.exists("run.py") :
-#     execfile ("run.py")
 
 # Allow a little more slop for slight pixel differences when in DEBUG
 # mode or when running on remote Travis-CI or Appveyor machines.
-if (("TRAVIS" in os.environ and os.environ["TRAVIS"]) or
-    ("APPVEYOR" in os.environ and os.environ["APPVEYOR"]) or
-    ("DEBUG" in os.environ and os.environ["DEBUG"])) :
+if (os.getenv('TRAVIS') or os.getenv('APPVEYOR') or os.getenv('DEBUG')) :
     failthresh *= 2.0
     hardfail *= 2.0
     failpercent *= 2.0
 
-# Force out.txt to be in the outputs
-##if "out.txt" not in outputs :
-##    outputs.append ("out.txt")
-
-# If either out.exr or out.tif is in the reference directory but somehow
-# is not in the outputs list, put it there anyway!
-if (os.path.exists("ref/out.exr") and ("out.exr" not in outputs)) :
-    outputs.append ("out.exr")
-if (os.path.exists("ref/out.tif") and ("out.tif" not in outputs)) :
-    outputs.append ("out.tif")
 
 # Run the test and check the outputs
-ret = runtest (command, outputs, failureok=failureok,
-               failthresh=failthresh, failpercent=failpercent)
+ret = runtest (command, outputs, failureok=failureok)
 sys.exit (ret)

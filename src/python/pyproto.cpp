@@ -11,16 +11,15 @@ namespace py = pybind11;
 #if PY_MAJOR_VERSION == 2
 // Preferred Python string caster for Python2 is py::bytes, so it's a byte
 // string (not unicode).
-#define PY_STR py::bytes
+#    define PY_STR py::bytes
 #else
 // Python3 is always unicode, so return a true str
-#define PY_STR py::str
+#    define PY_STR py::str
 #endif
 
 
 
-namespace PyProto
-{
+namespace PyProto {
 
 
 
@@ -28,15 +27,14 @@ namespace PyProto
 // MODULE name as a #define. Google for Argument-Prescan for additional
 // info on why this is necessary
 
-#define DECLARE_PYMODULE(x) PYBIND11_MODULE(x,m)
+#define DECLARE_PYMODULE(x) PYBIND11_MODULE(x, m)
 
-DECLARE_PYMODULE(PYMODULE_NAME) {
+DECLARE_PYMODULE(PYMODULE_NAME)
+{
     using namespace pybind11::literals;
 
-    m.def ("hello", &Proto::hello);
-    m.def ("add",   &Proto::add,
-           "a"_a, "b"_a);
+    m.def("hello", &Proto::hello);
+    m.def("add", &Proto::add, "a"_a, "b"_a);
 }
 
-} // namespace PyProto
-
+}  // namespace PyProto

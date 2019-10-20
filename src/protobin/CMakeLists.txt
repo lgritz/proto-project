@@ -1,6 +1,7 @@
-set (local_bin protobin)
-file (GLOB local_src *.cpp)
-add_executable (${local_bin} ${local_src})
-set_target_properties (${local_bin} PROPERTIES FOLDER "Tools")
-target_link_libraries (${local_bin} Proto)
-install_targets (${local_bin})
+fancy_add_executable (LINK_LIBRARIES
+                          Proto
+                          ${OPENIMAGEIO_LIBRARIES}
+                          ${ILMBASE_LIBRARIES}
+                          ${SANITIZE_LIBRARIES}
+                          ${Boost_LIBRARIES}
+                          ${CMAKE_DL_LIBS})

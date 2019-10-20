@@ -10,7 +10,7 @@
 
 
 int
-main (int argc, const char* argv[])
+main(int argc, const char* argv[])
 {
     std::cout << Proto_INTRO_STRING << "\n";
     std::cout << Proto_COPYRIGHT_STRING << "\n";
