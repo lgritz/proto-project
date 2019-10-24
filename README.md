@@ -14,11 +14,11 @@ The idea is that the project prototype has a fully working example of
 everything I might need (not all implemented yet):
 
 * A C++ library with a public API and header file.
-* Python bindings for the library (using PyBind11 or boost.Python).
+* Python bindings for the library using pybind11.
 * Unit tests for the library and testsuite for the binary.
 * A command-line binary that calls the library.
 * A GUI program using Qt.
 * CMake-based build system.
-* TravisCI and Appveyor build and testsuite.
+* GitHub Actions CI build and testsuite.
 * All the right stubs for readmes, license files, CLAs, release notes,
   documentation, etc.
