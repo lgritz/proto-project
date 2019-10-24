@@ -10,8 +10,6 @@ set (${PROJECT_NAME}_VERSION_RELEASE_TYPE ${PROJECT_VERSION_RELEASE_TYPE})
 set (PROJECT_COPYRIGHTYEARS "2019")
 set (PROJECT_AUTHORS "Main Author et al")
 
-set (PROJECT_VERSION_MAJORMINOR
-     "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}")
 message (STATUS "Building ${PROJECT_NAME} ${PROJECT_VERSION}")
 message (STATUS "CMake version is ${CMAKE_VERSION}")
 
@@ -40,11 +38,30 @@ if (CMAKE_USE_FOLDERS)
     set_property (GLOBAL PROPERTY USE_FOLDERS ON)
 endif ()
 
-include (GNUInstallDirs)
+
+option (VERBOSE "Print lots of messages while compiling" OFF)
+option (BUILD_TOOLS "Build the command-line tools" ON)
+option (BUILD_TESTS "Build the unit tests" ON)
+set (SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+     CACHE STRING "Set the SO version in the SO name of the output library")
+
+
+# Set the default namespace
+set (${PROJ_NAME}_NAMESPACE ${PROJECT_NAME} CACHE STRING
+     "Customized outer namespace base name (version will be added)")
+set (PROJ_NAMESPACE "${${PROJ_NAME}_NAMESPACE}")
+set (PROJ_NAMESPACE_V "${PROJ_NAMESPACE}_v${PROJECT_VERSION_MAJOR}_${PROJECT_VERSION_MINOR}")
+if (OIIO_NAMESPACE_INCLUDE_PATCH)
+    set (PROJ_NAMESPACE_V "${PROJ_NAMESPACE_V}_${PROJECT_VERSION_PATCH}")
+endif ()
+message(STATUS "Setting Namespace to: ${PROJ_NAMESPACE_V}")
+
 
 list(APPEND CMAKE_MODULE_PATH
      "${PROJECT_SOURCE_DIR}/src/cmake/modules"
      "${PROJECT_SOURCE_DIR}/src/cmake")
+
+include (GNUInstallDirs)
 
 # All the C++ and compiler related options and adjustments live here
 include (compiler)
@@ -54,27 +71,16 @@ include (colors)
 include (check_is_enabled)
 include (fancy_add_executable)
 
-
-option (VERBOSE "Print lots of messages while compiling" OFF)
-set (${PROJ_NAME}_NAMESPACE ${PROJECT_NAME} CACHE STRING "Customized outer namespace base name (version will be added)")
-option (BUILD_TOOLS "Build the command-line tools" ON)
-option (BUILD_TESTS "Build the unit tests" ON)
-
-# Set the default namespace
-set (PROJ_NAMESPACE "${${PROJ_NAME}_NAMESPACE}")
-set (PROJ_NAMESPACE_V "${PROJ_NAMESPACE}_v${PROJECT_VERSION_MAJOR}_${PROJECT_VERSION_MINOR}")
-if (OIIO_NAMESPACE_INCLUDE_PATCH)
-    set (PROJ_NAMESPACE_V "${PROJ_NAMESPACE_V}_${PROJECT_VERSION_PATCH}")
-endif ()
-message(STATUS "Setting Namespace to: ${PROJ_NAMESPACE_V}")
-
-set (SOVERSION ${PROJECT_VERSION_MAJORMINOR}
-     CACHE STRING "Set the SO version in the SO name of the output library")
-
-
+# All the dependency finding and options are here
 include (externalpackages)
-include (install)          # installation options all implemented here
+
+# Utilities related to finding python and making python bindings
 include (pythonutils)
+
+# We want CTest for testing, so this must be added before all the calls to
+# add_subdirectory, or their add_test commands will not register.
+include (CTest)
+
 
 include_directories (
     BEFORE
@@ -82,14 +88,6 @@ include_directories (
     "${CMAKE_BINARY_DIR}/src/include"
     "${CMAKE_BINARY_DIR}/include"
   )
-
-
-
-# We want CTest for testing
-# N.B. This needs to be added before any of the subdirectories, or
-# their add_test commands will not register.
-include (CTest)
-
 
 # Tell CMake to process the sub-directories
 add_subdirectory (src/libProto)

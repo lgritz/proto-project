@@ -3,6 +3,7 @@ option (USE_PYTHON "Build the Python bindings" ON)
 set (PYTHON_VERSION "2.7" CACHE STRING "Target version of python to find")
 option (PYLIB_INCLUDE_SONAME "If ON, soname/soversion will be set for Python module library" OFF)
 option (PYLIB_LIB_PREFIX "If ON, prefix the Python module with 'lib'" OFF)
+set (PYMODULE_SUFFIX "" CACHE STRING "Suffix to add to Python module init namespace")
 
 
 # Find Python. This macro should only be called if python is required. If
@@ -12,34 +13,37 @@ option (PYLIB_LIB_PREFIX "If ON, prefix the Python module with 'lib'" OFF)
 #    PYTHON_LIBRARIES     - python libraries to link
 #    PYTHON_SITE_DIR      - our own install dir where our python moduels go
 macro (find_python)
+    if (NOT VERBOSE)
+        set (PythonInterp_FIND_QUIETLY true)
+        set (PythonLibs_FIND_QUIETLY true)
+    endif ()
+
     # Attempt to find the desired version, but fall back to other
     # additional versions.
-    find_package (PythonInterp ${PYTHON_VERSION} REQUIRED)
+    checked_find_package (PythonInterp ${PYTHON_VERSION} REQUIRED)
 
     # The version that was found may not be the default or user
     # defined one.
     set (PYTHON_VERSION_FOUND ${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR})
 
-    if (NOT ${PYTHON_VERSION} EQUAL ${PYTHON_VERSION_FOUND} )
+    if (NOT ${PYTHON_VERSION} VERSION_EQUAL ${PYTHON_VERSION_FOUND} )
         message (WARNING "The requested version ${PYTHON_VERSION} was not found.") 
         message (WARNING "Using ${PYTHON_VERSION_FOUND} instead.")
     endif ()
 
-    find_package (PythonLibs ${PYTHON_VERSION_FOUND} REQUIRED)
+    checked_find_package (PythonLibs ${PYTHON_VERSION_FOUND} REQUIRED)
+    if (VERBOSE)
+        message (STATUS "    Python include dirs ${PYTHON_INCLUDE_PATH}")
+        message (STATUS "    Python libraries    ${PYTHON_LIBRARIES}")
+        message (STATUS "    Python site packages dir ${PYTHON_SITE_DIR}")
+        message (STATUS "    Python to include 'lib' prefix: ${PYLIB_LIB_PREFIX}")
+        message (STATUS "    Python to include SO version: ${PYLIB_INCLUDE_SONAME}")
+        message (STATUS "    Python version ${PYTHON_VERSION_STRING}")
+        message (STATUS "    Python version major: ${PYTHON_VERSION_MAJOR} minor: ${PYTHON_VERSION_MINOR}")
+    endif ()
 
     if (NOT DEFINED PYTHON_SITE_DIR)
         set (PYTHON_SITE_DIR "${CMAKE_INSTALL_LIBDIR}/python${PYTHON_VERSION_FOUND}/site-packages")
-    endif ()
-
-    message (STATUS "Python found ${PYTHONLIBS_FOUND} ")
-    if (VERBOSE)
-        message (STATUS "Python include dirs ${PYTHON_INCLUDE_PATH}")
-        message (STATUS "Python libraries    ${PYTHON_LIBRARIES}")
-        message (STATUS "Python site packages dir ${PYTHON_SITE_DIR}")
-        message (STATUS "Python to include 'lib' prefix: ${PYLIB_LIB_PREFIX}")
-        message (STATUS "Python to include SO version: ${PYLIB_INCLUDE_SONAME}")
-        message (STATUS "Python version ${PYTHON_VERSION_STRING}")
-        message (STATUS "Python version major: ${PYTHON_VERSION_MAJOR} minor: ${PYTHON_VERSION_MINOR}")
     endif ()
 endmacro()
 
@@ -130,12 +134,14 @@ macro (setup_python_module)
 
     # Exclude the 'lib' prefix from the name
     if (NOT PYLIB_LIB_PREFIX)
-        add_definitions("-DPYMODULE_NAME=${lib_MODULE}")
+        target_compile_definitions(${target_name}
+                                   PRIVATE "PYMODULE_NAME=${lib_MODULE}")
         set_target_properties (${target_name} PROPERTIES
                                OUTPUT_NAME ${lib_MODULE}
                                PREFIX "")
     else ()
-        add_definitions("-DPYMODULE_NAME=Py${lib_MODULE}")
+        target_compile_definitions(${target_name}
+                                   PRIVATE "PYMODULE_NAME=Py${lib_MODULE}")
         set_target_properties (${target_name} PROPERTIES
                                OUTPUT_NAME Py${lib_MODULE}
                                PREFIX lib)
