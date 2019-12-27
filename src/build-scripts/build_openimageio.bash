@@ -39,11 +39,13 @@ fi
 
 popd
 
-# echo "OpenImageIO_ROOT $OpenImageIO_ROOT"
-# ls -R $OpenImageIO_ROOT
-
 export OpenImageIO_ROOT=$OPENIMAGEIO_INSTALLDIR
 export PATH=$OpenImageIO_ROOT/bin:$PATH
 export DYLD_LIBRARY_PATH=$OpenImageIO_ROOT/lib:$DYLD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$OpenImageIO_ROOT/lib:$LD_LIBRARY_PATH
 export PYTHONPATH=$OpenImageIO_ROOT/lib/python${PYTHON_VERSION}:$PYTHONPATH
+
+echo "DYLD_LIBRARY_PATH = $DYLD_LIBRARY_PATH"
+echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
+echo "OpenImageIO_ROOT $OpenImageIO_ROOT"
+ls -R $OpenImageIO_ROOT

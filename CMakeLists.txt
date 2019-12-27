@@ -57,11 +57,14 @@ endif ()
 message(STATUS "Setting Namespace to: ${PROJ_NAMESPACE_V}")
 
 
-list(APPEND CMAKE_MODULE_PATH
-     "${PROJECT_SOURCE_DIR}/src/cmake/modules"
-     "${PROJECT_SOURCE_DIR}/src/cmake")
+list (APPEND CMAKE_MODULE_PATH
+      "${PROJECT_SOURCE_DIR}/src/cmake/modules"
+      "${PROJECT_SOURCE_DIR}/src/cmake")
 
 include (GNUInstallDirs)
+
+include (colors)
+include (check_is_enabled)
 
 # All the C++ and compiler related options and adjustments live here
 include (compiler)

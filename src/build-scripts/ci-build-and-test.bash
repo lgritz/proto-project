@@ -39,6 +39,10 @@ fi
 echo "Proto_ROOT $Proto_ROOT"
 ls -R -l "$Proto_ROOT"
 
+# Make sure it knows where to find OIIO
+export LD_LIBRARY_PATH=$OpenImageIO_ROOT/lib:$LD_LIBRARY_PATH
+export DYLD_LIBRARY_PATH=$OpenImageIO_ROOT/lib:$DYLD_LIBRARY_PATH
+
 if [[ -e ./build/$PLATFORM/src/include/export.h ]] ; then
     echo "export.h is:"
     cat ./build/$PLATFORM/src/include/export.h
@@ -49,8 +53,8 @@ if [[ "$SKIP_TESTS" == "" ]] ; then
     if [[ -e $PWD/build/$PLATFORM/src/libProto/Release/proto_test ]] ; then
         $PWD/build/$PLATFORM/src/libProto//Release/proto_test
     fi
+    PYTHONPATH=${PWD}/build/$PLATFORM/src/python:$PYTHONPATH
     pushd build/$PLATFORM
-    PYTHONPATH=${PWD}/src/python:$PYTHONPATH
     ctest -C ${CMAKE_BUILD_TYPE} -E broken ${TEST_FLAGS}
     popd
     #make $BUILD_FLAGS test

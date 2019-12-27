@@ -23,6 +23,10 @@
 #   OPENIMAGEIO_VERSION_TWEAK  Version minor tweak
 #   OIIOTOOL_BIN               Path to oiiotool executable
 #
+# Imported targets:
+#   OpenImageIO::OpenImageIO   The libOpenImageIO library.
+#   OpenImageIO::oiiotool      The oiiotool executable.
+#
 # Special inputs:
 #   OpenImageIO_ROOT - if using CMake >= 3.12, will automatically search
 #                          this area for OIIO components.
@@ -40,10 +44,6 @@ if (NOT OPENIMAGEIO_ROOT_DIR AND NOT $ENV{OPENIMAGEIO_ROOT_DIR} STREQUAL "")
     set (OPENIMAGEIO_ROOT_DIR $ENV{OPENIMAGEIO_ROOT_DIR})
 endif ()
 
-
-if (NOT OpenImageIO_FIND_QUIETLY)
-    message ( STATUS "OPENIMAGEIO_ROOT_DIR = ${OPENIMAGEIO_ROOT_DIR}" )
-endif ()
 
 find_library ( OPENIMAGEIO_LIBRARY
                NAMES OpenImageIO${OIIO_LIBNAME_SUFFIX}
@@ -92,6 +92,21 @@ if (OPENIMAGEIO_FOUND)
         message ( STATUS "OpenImageIO libraries    = ${OPENIMAGEIO_LIBRARIES}" )
         message ( STATUS "OpenImageIO library_dirs = ${OPENIMAGEIO_LIBRARY_DIRS}" )
         message ( STATUS "OpenImageIO oiiotool     = ${OIIOTOOL_BIN}" )
+    endif ()
+
+    if (NOT TARGET OpenImageIO::OpenImageIO)
+        add_library(OpenImageIO::OpenImageIO UNKNOWN IMPORTED)
+        set_target_properties(OpenImageIO::OpenImageIO PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${OPENIMAGEIO_INCLUDES}")
+
+        set_property(TARGET OpenImageIO::OpenImageIO APPEND PROPERTY
+            IMPORTED_LOCATION "${OPENIMAGEIO_LIBRARIES}")
+    endif ()
+
+    if (NOT TARGET OpenImageIO::oiiotool AND EXISTS "${OIIOTOOL_BIN}")
+        add_executable(OpenImageIO::oiiotool IMPORTED)
+        set_target_properties(OpenImageIO::oiiotool PROPERTIES
+            IMPORTED_LOCATION "${OIIOTOOL_BIN}")
     endif ()
 endif ()
 

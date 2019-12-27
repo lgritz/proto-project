@@ -2,7 +2,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/OpenImageIO/oiio/blob/master/LICENSE.md
 
-# When not in VERBOSE mode, try to make things as quiet as possible
+###########################################################################
+# Find external dependencies
+###########################################################################
+
 if (NOT VERBOSE)
     set (Boost_FIND_QUIETLY true)
     set (PkgConfig_FIND_QUIETLY true)
@@ -94,7 +97,13 @@ macro (checked_find_package pkgname)
             add_definitions (${_pkg_DEFINITIONS})
         else ()
             message (STATUS "${ColorRed}${pkgname} library not found ${ColorReset}")
-            message (STATUS "${ColorRed}    Try setting ${pkgname}_ROOT ? ${ColorReset}")
+            if (${pkgname}_ROOT)
+                message (STATUS "${ColorRed}    ${pkgname}_ROOT was: ${${pkgname}_ROOT} ${ColorReset}")
+            elseif ($ENV{${pkgname}_ROOT})
+                message (STATUS "${ColorRed}    ENV ${pkgname}_ROOT was: ${${pkgname}_ROOT} ${ColorReset}")
+            else ()
+                message (STATUS "${ColorRed}    Try setting ${pkgname}_ROOT ? ${ColorReset}")
+            endif ()
         endif()
     else ()
         if (NOT _quietskip)
@@ -105,15 +114,19 @@ endmacro()
 
 
 
+
+include (ExternalProject)
+
+option (BUILD_MISSING_DEPS "Try to download and build any missing dependencies" OFF)
+
+
 ###########################################################################
 # Boost setup
 if (LINKSTATIC)
     set (Boost_USE_STATIC_LIBS ON)
-    #add_definitions (-DBoost_USE_STATIC_LIBS=1)
 else ()
     if (MSVC)
         add_definitions (-DBOOST_ALL_DYN_LINK=1)
-        #add_definitions (-DOPENEXR_DLL)
     endif ()
 endif ()
 if (BOOST_CUSTOM)
@@ -149,9 +162,12 @@ link_directories ("${Boost_LIBRARY_DIRS}")
 ###########################################################################
 
 
-checked_find_package (OpenImageIO 2.0 REQUIRED)
+checked_find_package (OpenImageIO 2.1 REQUIRED)
 if (OPENIMAGEIO_FOUND)
     include_directories ("${OPENIMAGEIO_INCLUDES}")
+    if (WIN32 AND OPENIMAGEIO_LIBRARIES MATCHES "\.lib")
+        add_compile_options(-DOIIO_STATIC_DEFINE=1)
+    endif ()
 endif ()
 
 checked_find_package (TIFF 4.0 REQUIRED)
