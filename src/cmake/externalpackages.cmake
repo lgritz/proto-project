@@ -163,18 +163,11 @@ link_directories ("${Boost_LIBRARY_DIRS}")
 
 
 checked_find_package (OpenImageIO 2.1 REQUIRED)
-if (OPENIMAGEIO_FOUND)
-    include_directories ("${OPENIMAGEIO_INCLUDES}")
-    if (WIN32 AND OPENIMAGEIO_LIBRARIES MATCHES "\.lib")
-        add_compile_options(-DOIIO_STATIC_DEFINE=1)
-    endif ()
-endif ()
-
 checked_find_package (TIFF 4.0 REQUIRED)
 checked_find_package (ZLIB REQUIRED)
 
 # IlmBase & OpenEXR
-checked_find_package (OpenEXR 2.0 REQUIRED)
+checked_find_package (OpenEXR 2.2 REQUIRED)
 # We use Imath so commonly, may as well include it everywhere.
 include_directories ("${OPENEXR_INCLUDES}" "${ILMBASE_INCLUDES}"
                      "${ILMBASE_INCLUDES}/OpenEXR")

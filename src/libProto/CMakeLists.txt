@@ -3,8 +3,9 @@ set (lib_src proto.cpp)
 
 add_library (${local_lib} ${lib_src})
 target_link_libraries (${local_lib}
+                       INTERFACE
+                           OpenImageIO::OpenImageIO
                        PRIVATE
-                           ${OPENIMAGEIO_LIBRARIES}
                            ${ILMBASE_LIBRARIES}
                            ${SANITIZE_LIBRARIES}
                            ${Boost_LIBRARIES}
@@ -33,8 +34,7 @@ if (BUILD_TESTS)
         add_executable (${testname} ${testsrc})
         set_target_properties (${testname} PROPERTIES FOLDER "Unit Tests")
         target_link_libraries (${testname}
-                               PRIVATE ${local_lib}
-                                       ${OPENIMAGEIO_LIBRARIES})
+                               PRIVATE ${local_lib})
         add_test (unit_${testname} ${testname})
     endforeach ()
 endif ()

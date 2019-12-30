@@ -12,7 +12,7 @@ endif ()
 target_link_libraries (guiapp
                        PRIVATE Proto
                                Qt5::Core Qt5::Gui Qt5::Widgets
-                               ${OPENIMAGEIO_LIBRARIES}
+                               OpenImageIO::OpenImageIO
                                ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 set_target_properties (guiapp PROPERTIES FOLDER "Tools")
 install_targets (guiapp)

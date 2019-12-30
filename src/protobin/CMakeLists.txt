@@ -1,6 +1,6 @@
 fancy_add_executable (LINK_LIBRARIES
                           Proto
-                          ${OPENIMAGEIO_LIBRARIES}
+                          OpenImageIO::OpenImageIO
                           ${ILMBASE_LIBRARIES}
                           ${SANITIZE_LIBRARIES}
                           ${Boost_LIBRARIES}
