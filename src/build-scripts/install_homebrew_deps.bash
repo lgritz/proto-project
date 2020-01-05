@@ -33,6 +33,9 @@ else
     # brew install --display-times opencolorio
     brew install --display-times libpng giflib jpeg-turbo
     # brew install --display-times freetype libraw dcmtk openjpeg webp
+    brew install --display-times python && true
+    brew upgrade --display-times python cmake && true
+    brew link --overwrite python
     brew install --display-times pybind11 numpy
     # brew install --display-times field3d ffmpeg libheif openvdb tbb
     # brew install --display-times opencv ptex
