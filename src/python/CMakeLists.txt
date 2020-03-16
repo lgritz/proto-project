@@ -1,5 +1,5 @@
 find_python ()
-find_or_download_pybind11 ()
+checked_find_package (pybind11 2.4.2 REQUIRED)
 
 set (target_name PyProto)
 

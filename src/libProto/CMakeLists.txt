@@ -35,6 +35,6 @@ if (BUILD_TESTS)
         set_target_properties (${testname} PROPERTIES FOLDER "Unit Tests")
         target_link_libraries (${testname}
                                PRIVATE ${local_lib})
-        add_test (unit_${testname} ${testname})
+        add_test (unit_${testname} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${testname})
     endforeach ()
 endif ()

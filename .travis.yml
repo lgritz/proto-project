@@ -49,6 +49,7 @@ install:
           if [ "$BUILD_CMAKE" == "1" ] ; then
               source src/build-scripts/build_cmake.bash ;
           fi ;
+          CXX="ccache $CXX" source src/build-scripts/build_pybind11.bash ;
           CXX="ccache $CXX" source src/build-scripts/build_openexr.bash ;
           CXX="ccache $CXX" source src/build-scripts/build_ocio.bash ;
       fi

@@ -39,16 +39,13 @@ CMAKE_BUILD_TYPE ?= Release
 ifndef SITE
     SITE := ${shell uname -n}
 endif
-#ifneq (${shell echo ${SITE} | grep MYSITENAME},)
-#include ${working_dir}/site/spi/Makefile-bits
-#endif
 
 # Set up variables holding the names of platform-dependent directories --
 # set these after evaluating site-specific instructions
-top_build_dir := build
-build_dir     := ${top_build_dir}/${platform}${variant}
-top_dist_dir  := dist
-dist_dir      := ${top_dist_dir}/${platform}${variant}
+top_build_dir ?= build
+build_dir     ?= ${top_build_dir}/${platform}${variant}
+top_dist_dir  ?= dist
+dist_dir      ?= ${top_dist_dir}/${platform}${variant}
 
 ifndef INSTALL_PREFIX
 INSTALL_PREFIX := ${working_dir}/${dist_dir}
@@ -183,12 +180,12 @@ BUILDSENTINEL := build.ninja
 endif
 
 ifeq (${CODECOV},1)
-CMAKE_BUILD_TYPE=Debug
-MY_CMAKE_FLAGS += -DCODECOV:BOOL=${CODECOV}
+  CMAKE_BUILD_TYPE=Debug
+  MY_CMAKE_FLAGS += -DCODECOV:BOOL=${CODECOV}
 endif
 
 ifneq (${SANITIZE},)
-MY_CMAKE_FLAGS += -DSANITIZE=${SANITIZE}
+  MY_CMAKE_FLAGS += -DSANITIZE=${SANITIZE}
 endif
 
 ifneq (${CLANG_TIDY},)
@@ -214,7 +211,7 @@ ifneq (${CLANG_FORMAT_EXCLUDES},)
 endif
 
 ifneq (${BUILD_MISSING_DEPS},)
-MY_CMAKE_FLAGS += -DBUILD_MISSING_DEPS:BOOL=${BUILD_MISSING_DEPS}
+  MY_CMAKE_FLAGS += -DBUILD_MISSING_DEPS:BOOL=${BUILD_MISSING_DEPS}
 endif
 
 
@@ -296,7 +293,7 @@ TEST_FLAGS += --force-new-ctest-process --output-on-failure
 test: build
 	@ ${CMAKE} -E cmake_echo_color --switch=$(COLOR) --cyan "Running tests ${TEST_FLAGS}..."
 	@ # if [ "${CODECOV}" == "1" ] ; then lcov -b ${build_dir} -d ${build_dir} -z ; rm -rf ${build_dir}/cov ; fi
-	@ ( cd ${build_dir} ; PYTHONPATH=${PWD}/${build_dir}/src/python ctest -E broken ${TEST_FLAGS} )
+	@ ( cd ${build_dir} ; PYTHONPATH=${PWD}/${build_dir}/lib/python/site-packages ctest -E broken ${TEST_FLAGS} )
 	@ ( if [[ "${CODECOV}" == "1" ]] ; then \
 	      cd ${build_dir} ; \
 	      lcov -b . -d . -c -o cov.info ; \

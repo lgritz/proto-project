@@ -77,8 +77,12 @@ endif ()
 # Turn on more detailed warnings and optionally consider warnings as errors
 #
 option (STOP_ON_WARNING "Stop building if there are any compiler warnings" ON)
+option (EXTRA_WARNINGS "Enable lots of extra pedantic warnings" OFF)
 if (NOT MSVC)
     add_compile_options ("-Wall")
+    if (EXTRA_WARNINGS)
+        add_compile_options ("-Wextra")
+    endif ()
     if (STOP_ON_WARNING OR DEFINED ENV{CI})
         add_compile_options ("-Werror")
         # N.B. Force CI builds (Travis defines $CI) to use -Werror, even if
@@ -435,6 +439,25 @@ set (EXTRA_DSO_LINK_ARGS "" CACHE STRING "Extra command line definitions when bu
 
 
 ###########################################################################
+# Set the versioning for shared libraries.
+#
+if (${PROJECT_NAME}_SUPPORTED_RELEASE)
+    # Supported releases guarantee ABI back-compatibility within the release
+    # family, so SO versioning is major.minor.
+    set (SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+         CACHE STRING "Set the SO version for dynamic libraries")
+else ()
+    # Development master makes no ABI stability guarantee, so we make the
+    # SO naming capture down to the major.minor.patch level.
+    set (SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}
+         CACHE STRING "Set the SO version for dynamic libraries")
+endif ()
+if (VERBOSE)
+    message(STATUS "Setting SOVERSION to: ${SOVERSION}")
+endif ()
+
+
+###########################################################################
 # BUILD_SHARED_LIBS, if turned off, will disable building of .so/.dll
 # dynamic libraries and instead only build static libraries.
 #
@@ -500,8 +523,9 @@ endif ()
 
 
 ###########################################################################
-# Macro to install targets to the appropriate locations.  Use this instead of
-# the install(TARGETS ...) signature.
+# Macro to install targets to the appropriate locations.  Use this instead
+# of the install(TARGETS ...) signature. Note that it adds it to the
+# export targets list for when we generate config files.
 #
 # Usage:
 #
@@ -509,6 +533,7 @@ endif ()
 #
 macro (install_targets)
     install (TARGETS ${ARGN}
+             EXPORT ${PROJ_NAME}_EXPORTED_TARGETS
              RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT user
              LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT user
              ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT developer)

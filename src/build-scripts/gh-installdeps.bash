@@ -32,6 +32,8 @@ time sudo apt-get -q install -y \
 #    time sudo apt-get -q install -y libheif-dev
 #fi
 
+export CMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu:$CMAKE_PREFIX_PATH
+
 if [[ "$CXX" == "g++-4.8" ]] ; then
     time sudo apt-get install -y g++-4.8
 elif [[ "$CXX" == "g++-6" ]] ; then
@@ -51,11 +53,25 @@ fi
 
 #dpkg --list
 
-CMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu:$CMAKE_PREFIX_PATH
+if [[ "$CXX" == "clang++" ]] ; then
+    source src/build-scripts/build_llvm.bash
+fi
 
 
+
+CXX="ccache $CXX" source src/build-scripts/build_pybind11.bash
 CXX="ccache $CXX" source src/build-scripts/build_openexr.bash
+
+# Temporary (?) fix: GH ninja having problems, fall back to make
+CMAKE_GENERATOR="Unix Makefiles" \
 CXX="ccache $CXX" source src/build-scripts/build_ocio.bash
 
-OPENIMAGEIO_MAKEFLAGS="OIIO_BUILD_TESTS=0 USE_PYTHON=0 USE_OPENGL=0"
+# There are many parts of OIIO we don't need to build
+export ENABLE_iinfo=0 ENABLE_iv=0 ENABLE_igrep=0
+export ENABLE_iconvert=0 ENABLE_testtex=0
+export ENABLE_BMP=0 ENABLE_cineon=0 ENABLE_DDS=0 ENABLE_DPX=0 ENABLE_FITS=0
+export ENABLE_ICO=0 ENABLE_iff=0 ENABLE_jpeg2000=0 ENABLE_PNM=0 ENABLE_PSD=0
+export ENABLE_RLA=0 ENABLE_SGI=0 ENABLE_SOCKET=0 ENABLE_SOFTIMAGE=0
+export ENABLE_TARGA=0 ENABLE_WEBP=0
+export OPENIMAGEIO_MAKEFLAGS="OIIO_BUILD_TESTS=0 USE_PYTHON=0 USE_OPENGL=0"
 source src/build-scripts/build_openimageio.bash

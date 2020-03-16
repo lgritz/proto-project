@@ -32,6 +32,7 @@ vcpkg update
 # vcpkg install zlib:x64-windows
 vcpkg install tiff:x64-windows
 vcpkg install libpng:x64-windows
+vcpkg install pybind11:x64-windows
 #vcpkg install giflib:x64-windows
 #vcpkg install freetype:x64-windows
 # vcpkg install openexr:x64-windows
@@ -54,13 +55,11 @@ ls "$VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin"
 echo "All VCPkg installs:"
 vcpkg list
 
-# curl --location https://ffmpeg.zeranoe.com/builds/win64/shared/ffmpeg-4.2.1-win64-shared.zip -o ffmpeg-libs.zip
-# unzip ffmpeg-libs.zip
-curl --location https://ffmpeg.zeranoe.com/builds/win64/dev/ffmpeg-4.2.1-win64-dev.zip -o ffmpeg-dev.zip
-unzip ffmpeg-dev.zip
-ls
-ls -R *ffmpeg*
-FFmpeg_ROOT=$PWD/ffmpeg-4.2.1-win64-dev
+# curl --location https://ffmpeg.zeranoe.com/builds/win64/dev/ffmpeg-4.2.1-win64-dev.zip -o ffmpeg-dev.zip
+# unzip ffmpeg-dev.zip
+# ls
+# ls -R *ffmpeg*
+# FFmpeg_ROOT=$PWD/ffmpeg-4.2.1-win64-dev
 
 echo "CMAKE_PREFIX_PATH = $CMAKE_PREFIX_PATH"
 
@@ -100,6 +99,7 @@ OPENIMAGEIO_CMAKE_FLAGS+=" -DENABLE_DPX=0 -DENABLE_CINEON=0 -DENABLE_DDS=0"
 OPENIMAGEIO_CMAKE_FLAGS+=" -DENABLE_IFF=0 -DENABLE_ICO=0 -DENABLE_PSD=0"
 OPENIMAGEIO_CMAKE_FLAGS+=" -DENABLE_PNM=0 -DENABLE_ZFILE=0 -DENABLE_SOFTIMAGE=0"
 OPENIMAGEIO_CMAKE_FLAGS+=" -DLINKSTATIC=1 -DBUILD_SHARED_LIBS=0"
+export OPENIMAGEIO_CMAKE_FLAGS
 source src/build-scripts/build_openimageio.bash
 
 

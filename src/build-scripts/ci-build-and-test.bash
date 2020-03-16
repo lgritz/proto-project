@@ -37,7 +37,8 @@ else
 fi
 
 echo "Proto_ROOT $Proto_ROOT"
-ls -R -l "$Proto_ROOT"
+#ls -R -l "$Proto_ROOT"
+#ls -R -l build
 
 # Make sure it knows where to find OIIO
 export LD_LIBRARY_PATH=$OpenImageIO_ROOT/lib:$LD_LIBRARY_PATH
@@ -50,14 +51,11 @@ fi
 
 if [[ "$SKIP_TESTS" == "" ]] ; then
     $Proto_ROOT/bin/protobin --help
-    if [[ -e $PWD/build/$PLATFORM/src/libProto/Release/proto_test ]] ; then
-        $PWD/build/$PLATFORM/src/libProto//Release/proto_test
-    fi
-    PYTHONPATH=${PWD}/build/$PLATFORM/src/python:$PYTHONPATH
+    PYTHONPATH=${PWD}/build/$PLATFORM/lib/python/site-packages:$PYTHONPATH
+    PYTHONPATH=${PWD}/build/$PLATFORM/lib/python/site-packages/${CMAKE_BUILD_TYPE}:$PYTHONPATH
     pushd build/$PLATFORM
     ctest -C ${CMAKE_BUILD_TYPE} -E broken ${TEST_FLAGS}
     popd
-    #make $BUILD_FLAGS test
 fi
 
 if [[ "$BUILDTARGET" == clang-format ]] ; then
