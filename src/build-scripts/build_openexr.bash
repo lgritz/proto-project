@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Utility script to download and build OpenEXR & IlmBase
+
+# Exit the whole script if any command fails.
+set -ex
+
 # Which OpenEXR to retrieve, how to build it
 OPENEXR_REPO=${OPENEXR_REPO:=https://github.com/openexr/openexr.git}
 OPENEXR_VERSION=${OPENEXR_VERSION:=2.4.0}
@@ -99,3 +104,5 @@ export ILMBASE_LIBRARY_DIR=$OPENEXR_INSTALL_DIR/lib
 export OPENEXR_LIBRARY_DIR=$OPENEXR_INSTALL_DIR/lib
 export LD_LIBRARY_PATH=$OPENEXR_ROOT/lib:$LD_LIBRARY_PATH
 
+export ILMBASE_ROOT_DIR=$OPENEXR_INSTALL_DIR
+export OPENEXR_ROOT_DIR=$OPENEXR_INSTALL_DIR

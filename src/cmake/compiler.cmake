@@ -288,12 +288,12 @@ check_cxx_source_runs("
           return r == \"a c\" ? 0 : -1;
       }"
       USE_STD_REGEX)
+cmake_pop_check_state ()
 if (USE_STD_REGEX)
     add_definitions (-DUSE_STD_REGEX)
 else ()
     add_definitions (-DUSE_BOOST_REGEX)
 endif ()
-cmake_pop_check_state ()
 
 
 ###########################################################################
