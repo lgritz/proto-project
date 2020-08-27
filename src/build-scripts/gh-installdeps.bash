@@ -44,12 +44,16 @@ elif [[ "$CXX" == "g++-8" ]] ; then
     time sudo apt-get install -y g++-8
 elif [[ "$CXX" == "g++-9" ]] ; then
     time sudo apt-get install -y g++-9
+elif [[ "$CXX" == "g++-10" ]] ; then
+    time sudo apt-get install -y g++-10
 fi
 
 # time sudo apt-get install -y clang
 # time sudo apt-get install -y llvm
 #time sudo apt-get install -y libopenjpeg-dev
 #time sudo apt-get install -y libjpeg-turbo8-dev
+echo "Which python3 " `which python3`
+python3 --version && true
 
 #dpkg --list
 
@@ -60,18 +64,25 @@ fi
 
 
 CXX="ccache $CXX" source src/build-scripts/build_pybind11.bash
-CXX="ccache $CXX" source src/build-scripts/build_openexr.bash
 
-# Temporary (?) fix: GH ninja having problems, fall back to make
-CMAKE_GENERATOR="Unix Makefiles" \
-CXX="ccache $CXX" source src/build-scripts/build_ocio.bash
+if [[ "$OPENEXR_VERSION" != "" ]] ; then
+    CXX="ccache $CXX" source src/build-scripts/build_openexr.bash
+fi
 
-# There are many parts of OIIO we don't need to build
-export ENABLE_iinfo=0 ENABLE_iv=0 ENABLE_igrep=0
-export ENABLE_iconvert=0 ENABLE_testtex=0
-export ENABLE_BMP=0 ENABLE_cineon=0 ENABLE_DDS=0 ENABLE_DPX=0 ENABLE_FITS=0
-export ENABLE_ICO=0 ENABLE_iff=0 ENABLE_jpeg2000=0 ENABLE_PNM=0 ENABLE_PSD=0
-export ENABLE_RLA=0 ENABLE_SGI=0 ENABLE_SOCKET=0 ENABLE_SOFTIMAGE=0
-export ENABLE_TARGA=0 ENABLE_WEBP=0
-export OPENIMAGEIO_MAKEFLAGS="OIIO_BUILD_TESTS=0 USE_PYTHON=0 USE_OPENGL=0"
-source src/build-scripts/build_openimageio.bash
+if [[ "$OPENCOLORIO_VERSION" != "" ]] ; then
+    # Temporary (?) fix: GH ninja having problems, fall back to make
+    CMAKE_GENERATOR="Unix Makefiles" \
+    source src/build-scripts/build_opencolorio.bash
+fi
+
+if [[ "$OPENIMAGEIO_VERSION" != "" ]] ; then
+    # There are many parts of OIIO we don't need to build
+    export ENABLE_iinfo=0 ENABLE_iv=0 ENABLE_igrep=0
+    export ENABLE_iconvert=0 ENABLE_testtex=0
+    export ENABLE_BMP=0 ENABLE_cineon=0 ENABLE_DDS=0 ENABLE_DPX=0 ENABLE_FITS=0
+    export ENABLE_ICO=0 ENABLE_iff=0 ENABLE_jpeg2000=0 ENABLE_PNM=0 ENABLE_PSD=0
+    export ENABLE_RLA=0 ENABLE_SGI=0 ENABLE_SOCKET=0 ENABLE_SOFTIMAGE=0
+    export ENABLE_TARGA=0 ENABLE_WEBP=0
+    export OPENIMAGEIO_MAKEFLAGS="OIIO_BUILD_TESTS=0 USE_PYTHON=0 USE_OPENGL=0"
+    source src/build-scripts/build_openimageio.bash
+fi

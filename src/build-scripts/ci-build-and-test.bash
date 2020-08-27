@@ -12,29 +12,29 @@ if [[ -e src/build-scripts/ci-setenv.bash ]] ; then
     source src/build-scripts/ci-setenv.bash
 fi
 
-if [[ ! -e build/$PLATFORM ]] ; then
-    mkdir -p build/$PLATFORM
+mkdir -p build/$PLATFORM dist/$PLATFORM && true
+
+if [[ "$USE_SIMD" != "" ]] ; then
+    MY_CMAKE_FLAGS="$MY_CMAKE_FLAGS -DUSE_SIMD=$USE_SIMD"
 fi
-if [[ ! -e dist/$PLATFORM ]] ; then
-    mkdir -p dist/$PLATFORM
+if [[ "$DEBUG" == "1" ]] ; then
+    export CMAKE_BUILD_TYPE=Debug
 fi
 
-if [[ "$ARCH" == "windows64" ]] ; then
-    pushd build/$PLATFORM
-    cmake ../.. -G "$CMAKE_GENERATOR" \
-        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} \
+pushd build/$PLATFORM
+cmake ../.. -G "$CMAKE_GENERATOR" \
+        -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
         -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" \
         -DCMAKE_INSTALL_PREFIX="$Proto_ROOT" \
         -DPYTHON_VERSION="$PYTHON_VERSION" \
+        -DCMAKE_INSTALL_LIBDIR="$Proto_ROOT/lib" \
+        -DCMAKE_CXX_STANDARD="$CMAKE_CXX_STANDARD" \
         $MY_CMAKE_FLAGS -DVERBOSE=1
-    echo "Parallel build $CMAKE_BUILD_PARALLEL_LEVEL"
-    VERBOSE=1
-    time cmake --build . --target install --config ${CMAKE_BUILD_TYPE}
-    popd
-else
-    make $MAKEFLAGS VERBOSE=1 $BUILD_FLAGS config
-    make $MAKEFLAGS $PAR_MAKEFLAGS $BUILD_FLAGS $BUILDTARGET
+if [[ "$BUILDTARGET" != "none" ]] ; then
+    echo "Parallel build " ${CMAKE_BUILD_PARALLEL_LEVEL}
+    time cmake --build . --target ${BUILDTARGET:=install} --config ${CMAKE_BUILD_TYPE}
 fi
+popd
 
 echo "Proto_ROOT $Proto_ROOT"
 #ls -R -l "$Proto_ROOT"
@@ -44,17 +44,21 @@ echo "Proto_ROOT $Proto_ROOT"
 export LD_LIBRARY_PATH=$OpenImageIO_ROOT/lib:$LD_LIBRARY_PATH
 export DYLD_LIBRARY_PATH=$OpenImageIO_ROOT/lib:$DYLD_LIBRARY_PATH
 
-if [[ -e ./build/$PLATFORM/src/include/export.h ]] ; then
-    echo "export.h is:"
-    cat ./build/$PLATFORM/src/include/export.h
+if [[ "${DEBUG_CI:=0}" != "0" ]] ; then
+    echo "PATH=$PATH"
+    echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
+    echo "PYTHONPATH=$PYTHONPATH"
+    echo "ldd protobin"
+    ldd $Proto_ROOT/bin/protobin
 fi
 
-if [[ "$SKIP_TESTS" == "" ]] ; then
-    $Proto_ROOT/bin/protobin --help
+if [[ "${SKIP_TESTS:=0}" == "0" ]] ; then
+    $Proto_ROOT/bin/protobin --help || true
     PYTHONPATH=${PWD}/build/$PLATFORM/lib/python/site-packages:$PYTHONPATH
     PYTHONPATH=${PWD}/build/$PLATFORM/lib/python/site-packages/${CMAKE_BUILD_TYPE}:$PYTHONPATH
+    TESTSUITE_CLEANUP_ON_SUCCESS=1
     pushd build/$PLATFORM
-    ctest -C ${CMAKE_BUILD_TYPE} -E broken ${TEST_FLAGS}
+    ctest -C ${CMAKE_BUILD_TYPE} -E broken --force-new-ctest-process --output-on-failure
     popd
 fi
 
@@ -67,6 +71,6 @@ if [[ "$BUILDTARGET" == clang-format ]] ; then
     fi
 fi
 
-if [[ "$CODECOV" == 1 ]] ; then
-    bash <(curl -s https://codecov.io/bash)
-fi
+# if [[ "$CODECOV" == 1 ]] ; then
+#     bash <(curl -s https://codecov.io/bash)
+# fi

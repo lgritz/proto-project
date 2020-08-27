@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# This script, which assumes it is runnign on a Mac OSX with Homebrew
+# This script, which assumes it is running on a Mac OSX with Homebrew
 # installed, does a "brew install" in all packages reasonably needed by
 # OIIO.
 
@@ -33,16 +33,13 @@ else
     # All cases except for clang-format target, we need the dependencies.
     brew install --display-times gcc ccache cmake ninja boost && true
     brew link --overwrite gcc
-    brew install --display-times libtiff ilmbase openexr
-    # brew install --display-times opencolorio
-    brew install --display-times libpng giflib jpeg-turbo
-    # brew install --display-times freetype libraw dcmtk openjpeg webp
-    brew install --display-times python && true
-    brew upgrade --display-times python cmake && true
+    brew install --display-times python pybind11 numpy && true
+    brew upgrade --display-times python && true
     brew link --overwrite python
-    brew install --display-times pybind11 numpy
-    # brew install --display-times field3d ffmpeg libheif openvdb tbb
-    # brew install --display-times opencv ptex
+    brew upgrade --display-times cmake && true
+    brew install --display-times libtiff ilmbase openexr opencolorio
+    # brew install --display-times libpng giflib webp jpeg-turbo openjpeg libraw  && true
+    brew install --display-times freetype && true
     brew install --display-times qt
 fi
 
@@ -69,4 +66,4 @@ pip install numpy
 export PATH=/usr/local/opt/qt5/bin:$PATH ;
 export PATH=/usr/local/opt/python/libexec/bin:$PATH ;
 export PYTHONPATH=/usr/local/lib/python${PYTHON_VERSION}/site-packages:$PYTHONPATH ;
-export PATH=/usr/local/Cellar/llvm/9.0.0*/bin:$PATH ;
+export PATH=/usr/local/opt/llvm/bin:$PATH ;

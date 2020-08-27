@@ -10,7 +10,7 @@ assignees: ''
 **PLEASE DO NOT REPORT BUILD TROUBLES AS ISSUES**
 
 The best way to get help with your build problems is to ask a question on the
-[odeveloper mail list](http://lists.openimageio.org/listinfo.cgi/oiio-dev-openimageio.org).
+[developer mail list](http://lists.openimageio.org/listinfo.cgi/oiio-dev-openimageio.org).
 
 When you email about this, please attach one or both of the following:
 1. The full verbose build log, which you can create like this:

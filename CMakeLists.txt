@@ -90,6 +90,7 @@ include (compiler)
 # Helpful functions and macros for our project
 include (colors)
 include (check_is_enabled)
+include (checked_find_package)
 include (fancy_add_executable)
 
 # All the dependency finding and options are here

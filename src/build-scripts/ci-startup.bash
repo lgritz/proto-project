@@ -7,12 +7,14 @@
 # Figure out the platform
 if [[ $TRAVIS_OS_NAME == osx || $RUNNER_OS == macOS ]] ; then
       export ARCH=macosx
-fi
-if [[ $TRAVIS_OS_NAME == linux || $RUNNER_OS == Linux || $CIRCLECI == true ]] ; then
+elif [[ `uname -m` == aarch64 ]] ; then
+    export ARCH=aarch64
+elif [[ $TRAVIS_OS_NAME == linux || $RUNNER_OS == Linux || $CIRCLECI == true ]] ; then
       export ARCH=linux64
-fi
-if [[ $RUNNER_OS == Windows ]] ; then
+elif [[ $RUNNER_OS == Windows ]] ; then
       export ARCH=windows64
+else
+    export ARCH=unknown
 fi
 export PLATFORM=$ARCH
 
@@ -24,7 +26,7 @@ echo "Architecture is $ARCH"
 echo "Build platform name is $PLATFORM"
 
 # Environment variables we always need
-export USE_CCACHE=1
+export USE_CCACHE=${USE_CCACHE:=1}
 export CCACHE_CPP2=1
 export Proto_ROOT=$PWD/dist/$PLATFORM
 export DYLD_LIBRARY_PATH=$Proto_ROOT/lib:$DYLD_LIBRARY_PATH
@@ -39,11 +41,14 @@ export BUILD_MISSING_DEPS=${BUILD_MISSING_DEPS:=1}
 export COMPILER=${COMPILER:=gcc}
 export CXX=${CXX:=g++}
 export CI=true
-export USE_NINJA=1
+export USE_NINJA=${USE_NINJA:=1}
 export CMAKE_GENERATOR=${CMAKE_GENERATOR:=Ninja}
 export CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE:=Release}
+export CMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD:=11}
 
-if [[ $TRAVIS == true ]] ; then
+if [[ $TRAVIS == true && "$ARCH" == aarch64 ]] ; then
+    export PARALLEL=4
+elif [[ $TRAVIS == true ]] ; then
     export PARALLEL=2
 elif [[ $CIRCLECI == true ]] ; then
     export PARALLEL=4
@@ -52,18 +57,23 @@ elif [[ $GITHUB_ACTIONS == true ]] ; then
 fi
 export PARALLEL=${PARALLEL:=4}
 export PAR_MAKEFLAGS=-j${PARALLEL}
-export CMAKE_BUILD_PARALLEL_LEVEL=${PARALLEL}
-export CTEST_PARALLEL_LEVEL=${PARALLEL}
+export CMAKE_BUILD_PARALLEL_LEVEL=${CMAKE_BUILD_PARALLEL_LEVEL:=${PARALLEL}}
+export CTEST_PARALLEL_LEVEL=${CTEST_PARALLEL_LEVEL:=${PARALLEL}}
 
 export LOCAL_DEPS_DIR=${LOCAL_DEPS_DIR:=$HOME/ext}
+export PATH=${LOCAL_DEPS_DIR}/bin:$PATH
+export LD_LIBRARY_PATH=${LOCAL_DEPS_DIR}/lib:$LD_LIBRARY_PATH
+export DYLD_LIBRARY_PATH=${LOCAL_DEPS_DIR}/lib:$DYLD_LIBRARY_PATH
 
-uname -a
-uname -n
+echo "uname -a: " `uname -a`
+echo "uname -m: " `uname -m`
+echo "uname -s: " `uname -s`
+echo "uname -n: " `uname -n`
 pwd
 ls
 env | sort
 
-if [[ $ARCH == linux64 ]] ; then
+if [[ `uname -s` == "Linux" ]] ; then
     head -40 /proc/cpuinfo
 elif [[ $ARCH == macosx ]] ; then
     sysctl machdep.cpu.features

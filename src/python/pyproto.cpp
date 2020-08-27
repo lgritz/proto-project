@@ -1,6 +1,6 @@
 // Copyright 2017 Larry Gritz (et al)
-// MIT open source license, see the LICENSE file of this distribution
-// or https://opensource.org/licenses/MIT
+// SPDX-License-Identifier: BSD-3-Clause
+
 
 #include <Proto/Proto.h>
 
