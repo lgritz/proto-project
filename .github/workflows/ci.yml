@@ -1,5 +1,5 @@
 # Copyright Contributors to the Proto project.
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/lgritz/proto-project
 
 name: CI
@@ -16,7 +16,7 @@ on:
       - '**.rst'
   schedule:
     # Full nightly build
-    - cron: "0 4 * * *"
+    - cron: "0 8 * * *"
 
 
 jobs:
@@ -43,7 +43,9 @@ jobs:
         if: failure()
         with:
           name: ${{ github.job }}
-          path: build/*/testsuite/*/*.*
+          path: |
+            build/*/testsuite/*/*.*
+            build/*/CMake*.{txt,log}
 
   vfxplatform-2021:
     # Test what's anticipated to be VFX Platform 2021 -- mainly, that means
@@ -70,7 +72,9 @@ jobs:
         if: failure()
         with:
           name: ${{ github.job }}
-          path: build/*/testsuite/*/*.*
+          path: |
+            build/*/testsuite/*/*.*
+            build/*/CMake*.{txt,log}
 
   # linux-gcc7-cpp14-debug:
   #   # Test against gcc7, and also at the same time, do a Debug build.
@@ -117,7 +121,9 @@ jobs:
         if: failure()
         with:
           name: ${{ github.job }}
-          path: build/*/testsuite/*/*.*
+          path: |
+            build/*/testsuite/*/*.*
+            build/*/CMake*.{txt,log}
 
   # linux-bleeding-edge:
   #   # Test against development master for relevant dependencies, latest
@@ -204,15 +210,18 @@ jobs:
         run: |
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/install_homebrew_deps.bash
-            # pip3.8 install numpy
-            export PYTHONPATH=/usr/local/lib/python3.8/site-packages:$PYTHONPATH
-            source src/build-scripts/build_openimageio.bash
+            # OPENIMAGEIO_CMAKE_FLAGS="-DOIIO_BUILD_TESTS=0 -DUSE_OPENGL=0"
+            # source src/build-scripts/build_openimageio.bash
+            brew install openimageio
+            PYTHONPATH=$PYTHONPATH:/usr/local/python${PYTHON_VERSION}/site-packages
             source src/build-scripts/ci-build-and-test.bash
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
           name: ${{ github.job }}
-          path: build/*/testsuite/*/*.*
+          path: |
+            build/*/testsuite/*/*.*
+            build/*/CMake*.{txt,log}
 
   windows-vs2019:
     name: "Windows VS2019"
@@ -220,7 +229,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Setup Nuget.exe
-        uses: warrenbuckley/Setup-Nuget@v1
+        uses: nuget/setup-nuget@v1
       - name: all
         shell: bash
         env:
@@ -236,7 +245,9 @@ jobs:
         if: failure()
         with:
           name: ${{ github.job }}
-          path: build/*/testsuite/*/*.*
+          path: |
+            build/*/testsuite/*/*.*
+            build/*/CMake*.{txt,log}
 
   # windows-vs2017:
   #   name: "Windows VS2017"
@@ -244,7 +255,7 @@ jobs:
   #   steps:
   #     - uses: actions/checkout@v2
   #     - name: Setup Nuget.exe
-  #       uses: warrenbuckley/Setup-Nuget@v1
+  #       uses: nuget/setup-nuget@v1
   #     - name: all
   #       shell: bash
   #       env:

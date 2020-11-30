@@ -1,3 +1,24 @@
+# Copyright Contributors to the OpenImageIO project.
+# SPDX-License-Identifier: BSD-3-Clause
+# https://github.com/OpenImageIO/oiio/
+
+include (CTest)
+
+# Make a build/platform/testsuite directory, and copy the master runtest.py
+# there. The rest is up to the tests themselves.
+file (MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/testsuite")
+#file (COPY "${CMAKE_CURRENT_SOURCE_DIR}/testsuite/common"
+#      DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/testsuite")
+add_custom_command (OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/testsuite/runtest.py"
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${CMAKE_CURRENT_SOURCE_DIR}/testsuite/runtest.py"
+                        "${CMAKE_CURRENT_BINARY_DIR}/testsuite/runtest.py"
+                    MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/testsuite/runtest.py")
+add_custom_target ( CopyFiles ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/testsuite/runtest.py" )
+
+
+
+
 # add_testsuite_tests() - add a set of test cases.
 #
 # Usage:
@@ -52,7 +73,7 @@ macro (add_testsuite_tests)
                 set (_testname "${_testname}-broken")
             endif ()
 
-            set (_runtest python "${CMAKE_SOURCE_DIR}/testsuite/runtest.py" ${_testdir})
+            set (_runtest ${Python_EXECUTABLE} "${CMAKE_SOURCE_DIR}/testsuite/runtest.py" ${_testdir})
             if (MSVC_IDE)
                 set (_runtest ${_runtest} --devenv-config $<CONFIGURATION>
                                           --solution-path "${CMAKE_BINARY_DIR}" )
@@ -76,3 +97,27 @@ macro (add_testsuite_tests)
     endif ()
 endmacro ()
 
+
+
+# The tests are organized into a macro so it can be called after all the
+# directories with plugins are included.
+#
+macro (proto_add_all_tests)
+    # Basic tests that apply even to continuous integration tests:
+    # add_testsuite_tests (foo bar)
+
+    # Add tests that require the Python bindings if we built the Python
+    # bindings. This is mostly the test that are specifically about testing
+    # the Python bindings themselves, but also a handful of tests that are
+    # mainly about other things but happen to use Python in order to perform
+    # thee test.
+    # We also exclude these tests if this is a sanitizer build on Linux,
+    # because the Python interpreter itself won't be linked with the right asan
+    # libraries to run correctly.
+    if (USE_PYTHON)
+        if (NOT SANITIZE_ON_LINUX)
+            add_testsuite_tests (python-proto)
+        endif ()
+    endif ()
+
+endmacro()

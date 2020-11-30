@@ -1,4 +1,4 @@
-# Copyright 2008-present Contributors to the OpenImageIO project.
+# Copyright Contributors to the Proto project.
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/lgritz/proto-project
 
@@ -33,11 +33,12 @@ option (BUILD_MISSING_DEPS "Try to download and build any missing dependencies" 
 
 ###########################################################################
 # Boost setup
+if (MSVC)
+    # Disable automatic linking using pragma comment(lib,...) of boost libraries upon including of a header
+    add_definitions (-DBOOST_ALL_NO_LIB=1)
+endif ()
 if (LINKSTATIC)
     set (Boost_USE_STATIC_LIBS ON)
-    if (MSVC)
-        add_definitions (-DBOOST_ALL_NO_LIB=1)
-    endif ()
 else ()
     if (MSVC)
         add_definitions (-DBOOST_ALL_DYN_LINK=1)
@@ -57,10 +58,10 @@ else ()
     # to set the expected variables printed below. So until that's fixed
     # force FindBoost.cmake to use the original brute force path.
     set (Boost_NO_BOOST_CMAKE ON)
-    checked_find_package (Boost 1.55 REQUIRED
-                       COMPONENTS ${Boost_COMPONENTS}
-                       PRINT Boost_INCLUDE_DIRS Boost_LIBRARIES
-                      )
+    checked_find_package (Boost REQUIRED
+                          VERSION_MIN 1.70
+                          COMPONENTS ${Boost_COMPONENTS}
+                          PRINT Boost_INCLUDE_DIRS Boost_LIBRARIES )
 endif ()
 
 # On Linux, Boost 1.55 and higher seems to need to link against -lrt
@@ -76,24 +77,21 @@ link_directories ("${Boost_LIBRARY_DIRS}")
 ###########################################################################
 
 
-checked_find_package (OpenImageIO 2.1 REQUIRED)
-checked_find_package (TIFF 4.0 REQUIRED)
-checked_find_package (ZLIB REQUIRED)
+checked_find_package (OpenImageIO REQUIRED
+                      VERSION_MIN 2.1)
+# checked_find_package (TIFF REQUIRED
+#                       VERSION_MIN 4.0)
+# checked_find_package (ZLIB REQUIRED)
 
 # IlmBase & OpenEXR
-checked_find_package (OpenEXR 2.0 REQUIRED
-                      RECOMMEND_MIN 2.2
-                      RECOMMEND_MIN_REASON "for DWA compression")
-# We use Imath so commonly, may as well include it everywhere.
-include_directories ("${OPENEXR_INCLUDES}" "${ILMBASE_INCLUDES}"
-                     "${ILMBASE_INCLUDES}/OpenEXR")
-if (CMAKE_COMPILER_IS_CLANG AND OPENEXR_VERSION VERSION_LESS 2.3)
-    # clang C++ >= 11 doesn't like 'register' keyword in old exr headers
-    add_compile_options (-Wno-deprecated-register)
-endif ()
+checked_find_package (OpenEXR REQUIRED
+                      VERSION_MIN 2.4
+                      PRINT IMATH_INCLUDES)
 
 checked_find_package (OpenGL)
-checked_find_package (PugiXML)
+
+# From pythonutils.cmake
+find_python()
 
 
 ###########################################################################

@@ -1,4 +1,3 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python
 
-command += "python src/test_proto.py > out.txt"
-
+command += pythonbin + " src/test_proto.py >> out.txt ;"

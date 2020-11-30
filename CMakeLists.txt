@@ -11,6 +11,12 @@ set (PROJECT_AUTHORS "Main Author et al")
 set (PROJECT_COPYRIGHTYEARS "2019")
 set (${PROJECT_NAME}_SUPPORTED_RELEASE 0)  # Change to 1 after release branch
 
+# Identify whether this is included as a subproject of something else
+if (NOT "${CMAKE_PROJECT_NAME}" STREQUAL "${PROJECT_NAME}")
+    set (${PROJECT_NAME}_IS_SUBPROJECT ON)
+    message (STATUS "${PROJECT_NAME} is configuring as a CMake subproject")
+endif ()
+
 # If the user wants to use Conan to build dependencies, they will have done
 # this prior to the cmake config:
 #   cd <build area>
@@ -93,15 +99,21 @@ include (check_is_enabled)
 include (checked_find_package)
 include (fancy_add_executable)
 
-# All the dependency finding and options are here
-include (externalpackages)
-
 # Utilities related to finding python and making python bindings
 include (pythonutils)
 
-# We want CTest for testing, so this must be added before all the calls to
-# add_subdirectory, or their add_test commands will not register.
-include (CTest)
+# All the dependency finding and options are here
+include (externalpackages)
+
+# Include all our testing apparatus and utils, but not if it's a subproject
+if (NOT ${PROJECT_NAME}_IS_SUBPROJECT)
+    include (testing)
+else ()
+    macro (add_testsuite_tests)
+    endmacro ()
+    macro (proto_add_all_tests)
+    endmacro ()
+endif ()
 
 
 include_directories (
@@ -176,82 +188,12 @@ install (EXPORT Proto_EXPORTED_TARGETS
         NAMESPACE ${PROJECT_NAME}::)
 
 
-#########################################################################
-# Testing
 
-include (testutils)
 
-# Make a build/platform/testsuite directory, and copy the master runtest.py
-# there. The rest is up to the tests themselves.
-# file (MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/testsuite")
-add_custom_command (OUTPUT "${CMAKE_BINARY_DIR}/testsuite/runtest.py"
-                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                        "${CMAKE_SOURCE_DIR}/testsuite/runtest.py"
-                        "${CMAKE_BINARY_DIR}/testsuite/runtest.py"
-                    MAIN_DEPENDENCY "${CMAKE_SOURCE_DIR}/testsuite/runtest.py")
-add_custom_target ( CopyFiles ALL DEPENDS "${CMAKE_BINARY_DIR}/testsuite/runtest.py" )
 
-# Basic tests that apply even to continuous integration tests:
-# add_testsuite_tests (foo bar)
+proto_add_all_tests()
 
-# Add tests that require the Python bindings if we built the Python
-# bindings. This is mostly the test that are specifically about testing
-# the Python bindings themselves, but also a handful of tests that are
-# mainly about other things but happen to use Python in order to perform
-# thee test.
-# We also exclude these tests if this is a sanitizer build on Linux,
-# because the Python interpreter itself won't be linked with the right asan
-# libraries to run correctly.
-if (USE_PYTHON)
-    if (NOT SANITIZE_ON_LINUX)
-        add_testsuite_tests (python-proto)
-    endif ()
+
+if (NOT ${PROJECT_NAME}_IS_SUBPROJECT)
+    include (packaging)
 endif ()
-
-
-
-
-
-#########################################################################
-# Packaging
-set (CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
-set (CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
-set (CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
-# "Vendor" is only used in copyright notices, so we use the same thing that
-# the rest of the copyright notices say.
-set (CPACK_PACKAGE_VENDOR "${PROJECT_AUTHORS}")
-set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_NAME} is an open source library for reading and writing image file formats, a nice format-agnostic image viewer, and other image-related classes and utilities.")
-set (CPACK_PACKAGE_DESCRIPTION_FILE "${PROJECT_SOURCE_DIR}/src/doc/Description.txt")
-set (CPACK_PACKAGE_FILE_NAME ${PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR})
-#SET (CPACK_PACKAGE_INSTALL_DIRECTORY "${PROJECT_SOURCE_DIR}")
-file (MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/cpack")
-file (COPY "${PROJECT_SOURCE_DIR}/LICENSE" DESTINATION "${CMAKE_BINARY_DIR}/cpack")
-file (RENAME "${CMAKE_BINARY_DIR}/cpack/LICENSE" "${CMAKE_BINARY_DIR}/cpack/License.txt")
-set (CPACK_RESOURCE_FILE_LICENSE "${CMAKE_BINARY_DIR}/cpack/License.txt")
-file (COPY "${PROJECT_SOURCE_DIR}/README.md" DESTINATION "${CMAKE_BINARY_DIR}/cpack")
-set (CPACK_RESOURCE_FILE_README "${CMAKE_BINARY_DIR}/cpack/README.md")
-set (CPACK_RESOURCE_FILE_WELCOME "${PROJECT_SOURCE_DIR}/src/doc/Welcome.txt")
-#SET (CPACK_STRIP_FILES Do we need this?)
-if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-    set (CPACK_GENERATOR "TGZ;STGZ;RPM;DEB")
-    set (CPACK_SOURCE_GENERATOR "TGZ")
-endif ()
-if (APPLE)
-    set (CPACK_GENERATOR "TGZ;STGZ;PackageMaker")
-    set (CPACK_SOURCE_GENERATOR "TGZ")
-endif ()
-set (CPACK_SOURCE_PACKAGE_FILE_NAME ${PROJECT_NAME}-${PROJECT_VERSION}-source)
-#set (CPACK_SOURCE_STRIP_FILES Do we need this?)
-set (CPACK_SOURCE_IGNORE_FILES ".*~")
-set (CPACK_COMPONENT_UNSPECIFIED_HIDDEN TRUE)
-set (CPACK_COMPONENT_UNSPECIFIED_REQUIRED TRUE)
-set (CPACK_COMPONENTS_ALL user developer documentation Unspecified)
-set (CPACK_COMPONENT_USER_DISPLAY_NAME "Applications")
-set (CPACK_COMPONENT_DEVELOPER_DISPLAY_NAME "Developer files")
-set (CPACK_COMPONENT_DOCUMENTATION_DISPLAY_NAME "Documentation")
-set (CPACK_COMPONENT_USER_DESCRIPTION
-     "Applications: iv, iinfo, iconvert, idiff, igrep, maketx and libraries")
-set (CPACK_COMPONENT_DEVELOPER_DESCRIPTION "Include files")
-set (CPACK_COMPONENT_DOCUMENTATION_DESCRIPTION "${PROJECT_NAME} documentation")
-set (CPACK_COMPONENT_DEVELOPER_DEPENDS user)
-include (CPack)
