@@ -23,7 +23,7 @@ message (STATUS "CMAKE_CXX_COMPILER_ID  = ${CMAKE_CXX_COMPILER_ID}")
 ###########################################################################
 # C++ language standard
 #
-set (CMAKE_CXX_STANDARD 11 CACHE STRING
+set (CMAKE_CXX_STANDARD 14 CACHE STRING
      "C++ standard to prefer (11, 14, 17, 20, etc.)")
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 set (CMAKE_CXX_EXTENSIONS OFF)
@@ -134,14 +134,9 @@ if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
     add_compile_options ("-Qunused-arguments")
     # Don't warn if we ask it not to warn about warnings it doesn't know
     add_compile_options ("-Wunknown-warning-option")
-    if (CLANG_VERSION_STRING VERSION_GREATER_EQUAL 3.6 OR
-        APPLECLANG_VERSION_STRING VERSION_GREATER 6.1)
-        add_compile_options ("-Wno-unused-local-typedefs")
-    endif ()
-    if (CLANG_VERSION_STRING VERSION_GREATER_EQUAL 3.9)
-        # Don't warn about using unknown preprocessor symbols in `#if`
-        add_compile_options ("-Wno-expansion-to-defined")
-    endif ()
+    add_compile_options ("-Wno-unused-local-typedefs")
+    # Don't warn about using unknown preprocessor symbols in `#if`
+    add_compile_options ("-Wno-expansion-to-defined")
 endif ()
 
 if (CMAKE_COMPILER_IS_GNUCC AND NOT (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG))
@@ -363,13 +358,8 @@ if (CLANG_TIDY)
     find_program(CLANG_TIDY_EXE NAMES "clang-tidy"
                  DOC "Path to clang-tidy executable")
     message (STATUS "CLANG_TIDY_EXE ${CLANG_TIDY_EXE}")
-    if (CLANG_TIDY_EXE AND NOT ${CMAKE_VERSION} VERSION_LESS 3.6)
-        set (CMAKE_CXX_CLANG_TIDY
-             "${CLANG_TIDY_EXE}"
-             )
-        if (CLANG_TIDY_ARGS)
-            list (APPEND CMAKE_CXX_CLANG_TIDY ${CLANG_TIDY_ARGS})
-        endif ()
+    if (CLANG_TIDY_EXE)
+        set (CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE}" ${CLANG_TIDY_ARGS})
         if (CLANG_TIDY_CHECKS)
             list (APPEND CMAKE_CXX_CLANG_TIDY -checks="${CLANG_TIDY_CHECKS}")
         endif ()

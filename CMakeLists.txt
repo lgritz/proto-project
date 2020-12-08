@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.12)
-project (Proto VERSION 1.0.0.0
+project (Proto VERSION 0.1.0.0
          HOMEPAGE_URL "https://example.com"
          LANGUAGES CXX C)
 set (PROJ_NAME ${PROJECT_NAME})    # optional short name
@@ -8,7 +8,7 @@ string (TOUPPER ${PROJ_NAME} PROJ_NAME_UPPER)  # short name upper case
 set (PROJECT_VERSION_RELEASE_TYPE "dev")   # "dev", "betaX", "RCY", ""
 set (${PROJECT_NAME}_VERSION_RELEASE_TYPE ${PROJECT_VERSION_RELEASE_TYPE})
 set (PROJECT_AUTHORS "Main Author et al")
-set (PROJECT_COPYRIGHTYEARS "2019")
+set (PROJECT_COPYRIGHTYEARS "2021")
 set (${PROJECT_NAME}_SUPPORTED_RELEASE 0)  # Change to 1 after release branch
 
 # Identify whether this is included as a subproject of something else
