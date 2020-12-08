@@ -87,17 +87,14 @@ list (APPEND CMAKE_MODULE_PATH
 
 include (GNUInstallDirs)
 
-include (colors)
-include (check_is_enabled)
-
-# All the C++ and compiler related options and adjustments live here
-include (compiler)
-
 # Helpful functions and macros for our project
 include (colors)
 include (check_is_enabled)
 include (checked_find_package)
 include (fancy_add_executable)
+
+# All the C++ and compiler related options and adjustments live here
+include (compiler)
 
 # Utilities related to finding python and making python bindings
 include (pythonutils)
@@ -150,44 +147,54 @@ endif ()
 
 # Export the configuration files. There are also library-specific config
 # exports in the CMakeLists.txt of libOpenImageIO.
-include (CMakePackageConfigHelpers)
-
-# the file containing the exported targets
-set (TARGETS_EXPORT_NAME "${PROJECT_NAME}Targets.cmake")
-# the version file
-set (VERSION_CONFIG "${CMAKE_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake")
-# the config file that is actually looked for by find_package
-set (PROJECT_CONFIG "${CMAKE_BINARY_DIR}/${PROJECT_NAME}Config.cmake")
-# where all these files will be installed
-set (CONFIG_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
-
-# first generate the version file in the binary dir
-write_basic_package_version_file (
-        ${VERSION_CONFIG}
-        VERSION ${PROJECT_VERSION}
-        COMPATIBILITY SameMajorVersion)
-
-# generate the Targets file in the binary dir using the targets collected in
-# PROTO_EXPORTED_TARGETS each target is added to PROTO_EXPORTED_TARGETS
-# through the macro install_target().
-export (EXPORT ${PROJ_NAME}_EXPORTED_TARGETS FILE "${CMAKE_BINARY_DIR}/${TARGETS_EXPORT_NAME}")
-
-# generate the config file from the template in the binary dir
-configure_package_config_file ("${PROJECT_SOURCE_DIR}/src/cmake/Config.cmake.in"
-        "${PROJECT_CONFIG}"
-        INSTALL_DESTINATION "${CONFIG_INSTALL_DIR}")
-
-# generate the config file from the template in the binary dir
-install (FILES "${PROJECT_CONFIG}" "${VERSION_CONFIG}"
-        DESTINATION "${CONFIG_INSTALL_DIR}")
-
-# install targets files
-install (EXPORT Proto_EXPORTED_TARGETS
-        DESTINATION ${CONFIG_INSTALL_DIR}
-        FILE ${TARGETS_EXPORT_NAME}
-        NAMESPACE ${PROJECT_NAME}::)
 
 
+# Export the configuration files. There are also library-specific config
+# exports in the CMakeLists.txt of library subdirectories.
+# Turn this ON for projects that have "downstream" CMake consumers who need
+# exported cmake configuration files as part of the build.
+# For projects that arent making downstream-consumable artifacts (headers,
+# libraries, etc.) this whole section can be omitted.
+option (${PROJECT_NAME}_EXPORT_CMAKE_CONFIG
+        "Export CMake config for the project?" OFF)
+if (${PROJECT_NAME}_EXPORT_CMAKE_CONFIG)
+    include (CMakePackageConfigHelpers)
+
+    # the file containing the exported targets
+    set (TARGETS_EXPORT_NAME "${PROJECT_NAME}Targets.cmake")
+    # the version file
+    set (VERSION_CONFIG "${CMAKE_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake")
+    # the config file that is actually looked for by find_package
+    set (PROJECT_CONFIG "${CMAKE_BINARY_DIR}/${PROJECT_NAME}Config.cmake")
+    # where all these files will be installed
+    set (CONFIG_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
+
+    # first generate the version file in the binary dir
+    write_basic_package_version_file (
+            ${VERSION_CONFIG}
+            VERSION ${PROJECT_VERSION}
+            COMPATIBILITY SameMajorVersion)
+
+    # generate the Targets file in the binary dir using the targets collected in
+    # PROTO_EXPORTED_TARGETS each target is added to PROTO_EXPORTED_TARGETS
+    # through the macro install_target().
+    export (EXPORT ${PROJ_NAME}_EXPORTED_TARGETS FILE "${CMAKE_BINARY_DIR}/${TARGETS_EXPORT_NAME}")
+
+    # generate the config file from the template in the binary dir
+    configure_package_config_file ("${PROJECT_SOURCE_DIR}/src/cmake/Config.cmake.in"
+            "${PROJECT_CONFIG}"
+            INSTALL_DESTINATION "${CONFIG_INSTALL_DIR}")
+
+    # generate the config file from the template in the binary dir
+    install (FILES "${PROJECT_CONFIG}" "${VERSION_CONFIG}"
+            DESTINATION "${CONFIG_INSTALL_DIR}")
+
+    # install targets files
+    install (EXPORT Proto_EXPORTED_TARGETS
+            DESTINATION ${CONFIG_INSTALL_DIR}
+            FILE ${TARGETS_EXPORT_NAME}
+            NAMESPACE ${PROJECT_NAME}::)
+endif ()
 
 
 
