@@ -1,4 +1,4 @@
-// Copyright 2017 Larry Gritz (et al)
+// Copyright Larry Gritz (et al)
 // SPDX-License-Identifier: BSD-3-Clause
 
 
