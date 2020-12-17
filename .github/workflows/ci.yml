@@ -14,9 +14,9 @@ on:
     paths-ignore:
       - '**.md'
       - '**.rst'
-  schedule:
-    # Full nightly build
-    - cron: "0 8 * * *"
+  # schedule:
+  #   # Full nightly build
+  #   - cron: "0 8 * * *"
 
 
 jobs:
