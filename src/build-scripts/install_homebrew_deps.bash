@@ -16,7 +16,6 @@ if [[ `which brew` == "" ]] ; then
 fi
 
 
-brew uninstall openssl
 #brew update >/dev/null
 echo ""
 echo "Before my brew installs:"
@@ -28,11 +27,11 @@ brew link --overwrite gcc
 brew unlink python@2.7 || true
 brew unlink python@3.9 || true
 brew unlink python@3.8 || true
-brew link --force python@3.8 || true
+brew link --overwrite --force python@${PYTHON_VERSION} || true
 brew upgrade --display-times cmake || true
 brew install --display-times libtiff ilmbase openexr opencolorio
 brew install --display-times libpng giflib
-brew install --display-times freetype pybind11 numpy || true
+brew install --display-times freetype pybind11 || true
 brew install --display-times qt
 
 echo ""
@@ -40,7 +39,11 @@ echo "After brew installs:"
 brew list --versions
 
 # Needed on some systems
-# pip install numpy || true
+if [[ $PYTHON_VERSION != "2.7" ]] ; then
+    pip3 install numpy
+else
+    pip install numpy
+fi
 
 # Set up paths. These will only affect the caller if this script is
 # run with 'source' rather than in a separate shell.
@@ -48,3 +51,12 @@ export PATH=/usr/local/opt/qt5/bin:$PATH ;
 export PATH=/usr/local/opt/python/libexec/bin:$PATH ;
 export PYTHONPATH=/usr/local/lib/python${PYTHON_VERSION}/site-packages:$PYTHONPATH ;
 export PATH=/usr/local/opt/llvm/bin:$PATH ;
+
+# If field3d and hdf5 get even slightly out of sync, hdf5 will throw fits.
+# This is unnecessary, so we disable the step to make CI more likely to
+# pass in cases where they don't exactly match on the Travis/GH instances.
+export HDF5_DISABLE_VERSION_CHECK=1
+
+
+# Save the env for use by other stages
+src/build-scripts/save-env.bash

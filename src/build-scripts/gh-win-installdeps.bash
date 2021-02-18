@@ -1,12 +1,5 @@
 #!/usr/bin/env bash
 
-if [[ ! -e build/$PLATFORM ]] ; then
-    mkdir -p build/$PLATFORM
-fi
-if [[ ! -e dist/$PLATFORM ]] ; then
-    mkdir -p dist/$PLATFORM
-fi
-
 # DEP_DIR="$PWD/ext/dist"
 DEP_DIR="$PWD/dist/$PLATFORM"
 mkdir -p "$DEP_DIR"
@@ -17,17 +10,31 @@ VCPKG_INSTALLATION_ROOT=/c/vcpkg
 export CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH:=.}
 export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;$DEP_DIR"
 export BOOST_ROOT=${BOOST_ROOT_1_72_0}
+
+BOOST_UNIX_PATH=$(echo "/$BOOST_ROOT" | sed -e 's/\\/\//g' -e 's/://')
+echo "BOOST_UNIX_PATH=$BOOST_UNIX_PATH"
+
 export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;$BOOST_ROOT"
 export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;$VCPKG_INSTALLATION_ROOT/installed/x64-windows"
-export PATH="$PATH:$DEP_DIR/bin:$DEP_DIR/lib:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin:/bin"
+export PATH="$PATH:$DEP_DIR/bin:$DEP_DIR/lib:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin:/bin:${BOOST_UNIX_PATH}/lib:${BOOST_UNIX_PATH}/bin:${BOOST_UNIX_PATH}/lib64-msvc-14.2:$PWD/ext/dist/bin:$PWD/ext/dist/lib"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$DEP_DIR/bin:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$DEP_DIR/lib:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/lib"
 
 # export MY_CMAKE_FLAGS="$MY_CMAKE_FLAGS -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
 # export OPENEXR_CMAKE_FLAGS="$OPENEXR_CMAKE_FLAGS -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
 
-ls -l "C:/Program Files (x86)/Microsoft Visual Studio/*/Enterprise/VC/Tools/MSVC" && true
-ls -l "C:/Program Files (x86)/Microsoft Visual Studio" && true
+#ls -l "C:/Program Files (x86)/Microsoft Visual Studio/*/Enterprise/VC/Tools/MSVC" && true
+#ls -l "C:/Program Files (x86)/Microsoft Visual Studio" && true
+
+
+if [[ "$PYTHON_VERSION" == "3.6" ]] ; then
+    export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;/c/hostedtoolcache/windows/Python/3.6.8/x64"
+else
+    export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;/c/hostedtoolcache/windows/Python/3.7.9/x64"
+    export Python_EXECUTABLE="/c/hostedtoolcache/windows/Python/3.7.9/x64/python.exe"
+    export PYTHONPATH=$OpenImageIO_ROOT/lib/python${PYTHON_VERSION}/site-packages
+fi
+pip install numpy
 
 
 ########################################################################
@@ -35,14 +42,16 @@ ls -l "C:/Program Files (x86)/Microsoft Visual Studio" && true
 #
 # Currently we are not using this, but here it is for reference:
 #
-# vcpkg list
+echo "All pre-installed VCPkg installs:"
+vcpkg list
+echo "---------------"
 # vcpkg update
 # 
 # # vcpkg install zlib:x64-windows
-# vcpkg install tiff:x64-windows
+vcpkg install tiff:x64-windows
 # vcpkg install libpng:x64-windows
 # vcpkg install giflib:x64-windows
-# vcpkg install freetype:x64-windows
+vcpkg install freetype:x64-windows
 # # vcpkg install openexr:x64-windows
 # # vcpkg install libjpeg-turbo:x64-windows
 # 
@@ -63,10 +72,11 @@ ls -l "C:/Program Files (x86)/Microsoft Visual Studio" && true
 # 
 # # export PATH="$PATH:$DEP_DIR/bin:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin"
 # export PATH="$DEP_DIR/lib:$DEP_DIR/bin:$PATH:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/lib"
+export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;$VCPKG_INSTALLATION_ROOT/installed/x64-windows/lib"
 # export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/lib:$DEP_DIR/lib:$DEP_DIR/bin"
 # 
-# echo "All VCPkg installs:"
-# vcpkg list
+echo "All VCPkg installs:"
+vcpkg list
 #
 ########################################################################
 
@@ -82,9 +92,11 @@ export ZLIB_ROOT=$PWD/ext/dist
 src/build-scripts/build_libpng.bash
 export PNG_ROOT=$PWD/ext/dist
 
-src/build-scripts/build_libtiff.bash
-export TIFF_ROOT=$PWD/ext/dist
+# We're currently getting libtiff from vcpkg
+#src/build-scripts/build_libtiff.bash
+#export TIFF_ROOT=$PWD/ext/dist
 
+# We're currently getting jpeg from vcpkg
 # LIBJPEGTURBO_CONFIG_OPTS=-DWITH_SIMD=OFF
 # # ^^ because we're too lazy to build nasm
 # src/build-scripts/build_libjpeg-turbo.bash
@@ -104,7 +116,6 @@ echo "CMAKE_PREFIX_PATH = $CMAKE_PREFIX_PATH"
 OPENEXR_CXX_FLAGS=" /W1 /EHsc /DWIN32=1 "
 #OPENEXR_BUILD_TYPE=$CMAKE_BUILD_TYPE
 OPENEXR_INSTALL_DIR=$DEP_DIR
-OPENEXR_VERSION=v2.4.1
 source src/build-scripts/build_openexr.bash
 export PATH="$OPENEXR_INSTALL_DIR/bin:$OPENEXR_INSTALL_DIR/lib:$PATH"
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PATH
@@ -152,3 +163,8 @@ fi
 
 # For CI on Windows, prefer to pick up static libs where possible
 MY_CMAKE_FLAGS="$MY_CMAKE_FLAGS -DLINKSTATIC=1 -DBUILD_SHARED_LIBS=0"
+
+
+
+# Save the env for use by other stages
+src/build-scripts/save-env.bash

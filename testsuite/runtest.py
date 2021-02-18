@@ -116,16 +116,12 @@ else :
         newsymlink (test_source_dir, "./data")
 
 
-# Disable this test on Travis when using leak sanitizer, because the error
-# condition makes a leak we can't stop, but that's ok.
-import os
-if (os.getenv("TRAVIS") and (os.getenv("SANITIZE") in ["leak","address"])
-    and os.path.exists(os.path.join (test_source_dir,"TRAVIS_SKIP_LSAN"))) :
-    sys.exit (0)
-
-pythonbin = 'python'
-if os.getenv("PYTHON_VERSION") :
-    pythonbin += os.getenv("PYTHON_VERSION")
+if os.getenv("Python_EXECUTABLE") :
+    pythonbin = os.getenv("Python_EXECUTABLE")
+else :
+    pythonbin = 'python'
+    if os.getenv("PYTHON_VERSION") :
+        pythonbin += os.getenv("PYTHON_VERSION")
 #print ("pythonbin = ", pythonbin)
 
 
