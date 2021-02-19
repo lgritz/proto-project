@@ -22,17 +22,17 @@ echo "Before my brew installs:"
 brew list --versions
 
 # All cases except for clang-format target, we need the dependencies.
-brew install --display-times gcc ccache cmake ninja boost || true
+brew install --display-times -q gcc ccache cmake ninja boost || true
 brew link --overwrite gcc
 brew unlink python@2.7 || true
 brew unlink python@3.9 || true
 brew unlink python@3.8 || true
 brew link --overwrite --force python@${PYTHON_VERSION} || true
-brew upgrade --display-times cmake || true
-brew install --display-times libtiff ilmbase openexr opencolorio
-brew install --display-times libpng giflib
-brew install --display-times freetype pybind11 || true
-brew install --display-times qt
+brew upgrade --display-times -q cmake || true
+brew install --display-times -q libtiff ilmbase openexr opencolorio
+brew install --display-times -q libpng giflib
+brew install --display-times -q freetype pybind11 || true
+brew install --display-times -q qt
 
 echo ""
 echo "After brew installs:"

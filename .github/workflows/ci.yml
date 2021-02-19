@@ -188,7 +188,7 @@ jobs:
       - name: Dependencies
         run: |
             src/build-scripts/install_homebrew_deps.bash
-            brew install openimageio
+            brew install --display-times -q openimageio
       - name: Build
         run: |
             export PYTHONPATH=/usr/local/lib/python${PYTHON_VERSION}/site-packages:$PYTHONPATH
