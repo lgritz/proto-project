@@ -78,14 +78,14 @@ link_directories ("${Boost_LIBRARY_DIRS}")
 
 
 checked_find_package (OpenImageIO REQUIRED
-                      VERSION_MIN 2.1)
+                      VERSION_MIN 2.5)
 # checked_find_package (TIFF REQUIRED
 #                       VERSION_MIN 4.0)
 # checked_find_package (ZLIB REQUIRED)
 
 # IlmBase & OpenEXR
 checked_find_package (OpenEXR REQUIRED
-                      VERSION_MIN 2.4
+                      VERSION_MIN 3.1
                       PRINT IMATH_INCLUDES)
 
 checked_find_package (OpenGL)
@@ -96,14 +96,17 @@ find_python()
 
 ###########################################################################
 # Qt setup
-set (qt5_modules Core Gui Widgets)
-if (OPENGL_FOUND)
-    list (APPEND qt5_modules OpenGL)
-endif ()
 option (USE_QT "Use Qt if found" ON)
-checked_find_package (Qt5 COMPONENTS ${qt5_modules})
-if (USE_QT AND NOT Qt5_FOUND AND APPLE)
-    message (STATUS "  If you think you installed qt5 with Homebrew and it still doesn't work,")
-    message (STATUS "  try:   export PATH=/usr/local/opt/qt5/bin:$PATH")
+if (USE_QT)
+    checked_find_package (OpenGL)   # used for iv
 endif ()
-
+if (USE_QT AND OPENGL_FOUND)
+    checked_find_package (Qt6 COMPONENTS Core Gui Widgets OpenGLWidgets)
+    if (NOT Qt6_FOUND)
+        checked_find_package (Qt5 COMPONENTS Core Gui Widgets OpenGL)
+    endif ()
+    if (NOT Qt5_FOUND AND NOT Qt6_FOUND AND APPLE)
+        message (STATUS "  If you think you installed qt with Homebrew and it still doesn't work,")
+        message (STATUS "  try:   export PATH=/usr/local/opt/qt/bin:$PATH")
+    endif ()
+endif ()

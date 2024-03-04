@@ -1,20 +1,39 @@
-cmake_minimum_required (VERSION 3.12)
-project (Proto VERSION 0.1.0.0
+cmake_minimum_required (VERSION 3.18)
+
+set (Proto_VERSION "0.1.0.0")
+set (Proto_VERSION_OVERRIDE "" CACHE STRING
+     "Version override (use with caution)!")
+mark_as_advanced (Proto_VERSION_OVERRIDE)
+if (Proto_VERSION_OVERRIDE)
+    set (Proto_VERSION ${Proto_VERSION_OVERRIDE})
+endif ()
+
+project (Proto VERSION ${Proto_VERSION}
          HOMEPAGE_URL "https://example.com"
          LANGUAGES CXX C)
+
 set (PROJ_NAME ${PROJECT_NAME})    # optional short name
 string (TOLOWER ${PROJ_NAME} PROJ_NAME_LOWER)  # short name lower case
 string (TOUPPER ${PROJ_NAME} PROJ_NAME_UPPER)  # short name upper case
-set (PROJECT_VERSION_RELEASE_TYPE "dev")   # "dev", "betaX", "RCY", ""
+set (PROJECT_VERSION_RELEASE_TYPE "dev" CACHE STRING
+    "Build type, for example: dev, beta2, RC1 (empty string for normal release)")
 set (${PROJECT_NAME}_VERSION_RELEASE_TYPE ${PROJECT_VERSION_RELEASE_TYPE})
 set (PROJECT_AUTHORS "Main Author et al")
-set (PROJECT_COPYRIGHTYEARS "2021")
-set (${PROJECT_NAME}_SUPPORTED_RELEASE 0)  # Change to 1 after release branch
+option (${PROJECT_NAME}_SUPPORTED_RELEASE
+        "Set ON for supported release branch, OFF for master" OFF)
+if (${PROJECT_NAME}_SUPPORTED_RELEASE)
+    set (${PROJECT_NAME}_DEV_RELEASE OFF)
+else ()
+    set (${PROJECT_NAME}_DEV_RELEASE ON)
+endif ()
 
-# Identify whether this is included as a subproject of something else
-if (NOT "${CMAKE_PROJECT_NAME}" STREQUAL "${PROJECT_NAME}")
-    set (${PROJECT_NAME}_IS_SUBPROJECT ON)
-    message (STATUS "${PROJECT_NAME} is configuring as a CMake subproject")
+# Set PROJECT_IS_TOP_LEVEL to ON if if this is the top level project (not
+# if this is included as a subproject of something else). Note that this is
+# handled automatically for CMake >= 3.21.
+if (CMAKE_VERSION VERSION_LESS 3.21)
+    if ("${CMAKE_PROJECT_NAME}" STREQUAL "${PROJECT_NAME}")
+        set (PROJECT_IS_TOP_LEVEL ON)
+    endif ()
 endif ()
 
 # If the user wants to use Conan to build dependencies, they will have done
@@ -28,12 +47,18 @@ if (EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
     conan_basic_setup()
 endif()
 
-message (STATUS "Building ${PROJECT_NAME} ${PROJECT_VERSION}")
-message (STATUS "CMake version is ${CMAKE_VERSION}")
-
 if (NOT CMAKE_BUILD_TYPE)
     set (CMAKE_BUILD_TYPE "Release")
 endif ()
+
+# If the user hasn't configured cmake with an explicit
+# -DCMAKE_INSTALL_PREFIX=..., then set it to safely install into ./dist, to
+# help prevent the user from accidentally writing over /usr/local or whatever.
+if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT
+      AND PROJECT_IS_TOP_LEVEL)
+    set (CMAKE_INSTALL_PREFIX "${PROJECT_SOURCE_DIR}/dist" CACHE PATH
+         "Installation location" FORCE)
+endif()
 
 message (STATUS "Configuring ${PROJECT_NAME} ${PROJECT_VERSION}")
 message (STATUS "CMake ${CMAKE_VERSION}")
@@ -44,6 +69,7 @@ message (STATUS "Project build dir      = ${CMAKE_BINARY_DIR}")
 message (STATUS "Project install prefix = ${CMAKE_INSTALL_PREFIX}")
 message (STATUS "Configuration types    = ${CMAKE_CONFIGURATION_TYPES}")
 message (STATUS "Build type             = ${CMAKE_BUILD_TYPE}")
+message (STATUS "Supported release      = ${${PROJECT_NAME}_SUPPORTED_RELEASE}")
 
 # Make the build area layout look a bit more like the final dist layout
 set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -54,7 +80,6 @@ if ("${PROJECT_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
     message (FATAL_ERROR "Not allowed to run in-source build!")
 endif ()
 
-
 option (CMAKE_USE_FOLDERS "Use the FOLDER target property to organize targets into folders." ON)
 mark_as_advanced (CMAKE_USE_FOLDERS)
 if (CMAKE_USE_FOLDERS)
@@ -63,8 +88,13 @@ endif ()
 
 
 option (VERBOSE "Print lots of messages while compiling" OFF)
-option (BUILD_TOOLS "Build the command-line tools" ON)
-option (BUILD_TESTS "Build the unit tests" ON)
+if (VERBOSE)
+    set (CMAKE_MESSAGE_LOG_LEVEL "VERBOSE" CACHE STRING "CMake log level to display")
+else ()
+    set (CMAKE_MESSAGE_LOG_LEVEL "STATUS" CACHE STRING "CMake log level to display")
+endif ()
+option (${PROJ_NAME}_BUILD_TOOLS "Build the command-line tools" ON)
+option (${PROJ_NAME}_BUILD_TESTS "Build the unit tests" ON)
 set (SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
      CACHE STRING "Set the SO version in the SO name of the output library")
 
@@ -72,7 +102,8 @@ set (SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
 # Set the default namespace
 set (${PROJ_NAME}_NAMESPACE ${PROJECT_NAME} CACHE STRING
      "Customized outer namespace base name (version will be added)")
-option (${PROJ_NAME}_NAMESPACE_INCLUDE_PATCH "Should the inner namespace include the patch number" OFF)
+option (${PROJ_NAME}_NAMESPACE_INCLUDE_PATCH
+     "Should the inner namespace include the patch number" ${${PROJECT_NAME}_DEV_RELEASE})
 set (PROJ_NAMESPACE "${${PROJ_NAME}_NAMESPACE}")
 set (PROJ_NAMESPACE_V "${PROJ_NAMESPACE}_v${PROJECT_VERSION_MAJOR}_${PROJECT_VERSION_MINOR}")
 if (OIIO_NAMESPACE_INCLUDE_PATCH)
@@ -103,7 +134,7 @@ include (pythonutils)
 include (externalpackages)
 
 # Include all our testing apparatus and utils, but not if it's a subproject
-if (NOT ${PROJECT_NAME}_IS_SUBPROJECT)
+if (PROJECT_IS_TOP_LEVEL)
     include (testing)
 else ()
     macro (add_testsuite_tests)
@@ -124,7 +155,7 @@ include_directories (
 add_subdirectory (src/libProto)
 add_subdirectory (src/include)
 
-if (BUILD_TOOLS)
+if (${PROJ_NAME}_BUILD_TOOLS)
     add_subdirectory (src/protobin)
 endif ()
 
@@ -132,7 +163,7 @@ if (USE_PYTHON)
     add_subdirectory (src/python)
 endif ()
 
-if (USE_QT AND Qt5_FOUND)
+if (USE_QT AND (Qt5_FOUND OR Qt6_FOUND))
     add_subdirectory (src/guiapp)
 endif ()
 
@@ -198,9 +229,10 @@ endif ()
 
 
 
-proto_add_all_tests()
+if (PROJECT_IS_TOP_LEVEL AND BUILD_TESTING AND ${PROJ_NAME}_BUILD_TESTS)
+    proto_add_all_tests()
+endif ()
 
-
-if (NOT ${PROJECT_NAME}_IS_SUBPROJECT)
+if (PROJECT_IS_TOP_LEVEL)
     include (packaging)
 endif ()
