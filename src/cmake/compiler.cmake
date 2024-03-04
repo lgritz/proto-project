@@ -22,9 +22,9 @@ message (VERBOSE "CMAKE_CXX_COMPILE_FEATURES = ${CMAKE_CXX_COMPILE_FEATURES}")
 ###########################################################################
 # C++ language standard
 #
-set (CMAKE_CXX_MINIMUM 14)
+set (CMAKE_CXX_MINIMUM 17)
 set (CMAKE_CXX_STANDARD 17 CACHE STRING
-     "C++ standard to build with (14, 17, 20, etc.) Minimum is ${CMAKE_CXX_MINIMUM}.")
+     "C++ standard to build with (17, 20, 23, etc.) Minimum is ${CMAKE_CXX_MINIMUM}.")
 set (DOWNSTREAM_CXX_STANDARD 14 CACHE STRING
      "C++ minimum standard to impose on downstream clients")
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
