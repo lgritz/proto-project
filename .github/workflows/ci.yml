@@ -21,50 +21,103 @@ on:
 
 jobs:
 
-  vfxplatform-2020:
-    name: "Linux VFX Platform 2020: gcc6/C++14 py3.7 boost-1.70 exr-2.4"
-    runs-on: ubuntu-latest
+  aswf:
+    name: "VFX${{matrix.vfxyear}} ${{matrix.desc}}"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - desc: gcc11/C++17 py3.10 boost1.80 exr3.1 ocio2.2
+            nametag: linux-vfx2023
+            runner: ubuntu-latest
+            container: aswftesting/ci-osl:2023-clang15
+            vfxyear: 2023
+            cxx_std: 17
+            python_ver: "3.10"
+            simd: "avx2,f16c"
+            fmt_ver: 10.1.1
+            pybind11_ver: v2.10.0
+          - desc: gcc11/C++17 py3.11 boost1.82 exr3.2 ocio2.3
+            nametag: linux-vfx2024
+            runner: ubuntu-latest
+            container: aswftesting/ci-osl:2024-clang17
+            vfxyear: 2024
+            cxx_std: 17
+            python_ver: "3.11"
+            simd: "avx2,f16c"
+            fmt_ver: 10.1.1
+            pybind11_ver: v2.10.0
+
+    runs-on: ${{ matrix.runner }}
     container:
-      image: aswf/ci-osl:2020
+      image: ${{ matrix.container }}
     env:
-      CXX: g++
-      CC: gcc
-      CMAKE_CXX_STANDARD: 14
-      PYTHON_VERSION: 3.7
-      USE_SIMD: avx
+      CXX: ${{matrix.cxx_compiler}}
+      CC: ${{matrix.cc_compiler}}
+      CMAKE_CXX_STANDARD: ${{matrix.cxx_std}}
+      USE_SIMD: ${{matrix.simd}}
+      FMT_VERSION: ${{matrix.fmt_ver}}
+      OPENEXR_VERSION: ${{matrix.openexr_ver}}
+      PYBIND11_VERSION: ${{matrix.pybind11_ver}}
+      PYTHON_VERSION: ${{matrix.python_ver}}
+      ABI_CHECK: ${{matrix.abi_check}}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+        # Note: can't upgrade to actions/checkout 4.0 because it needs newer
+        # glibc than these containers have.
       - name: Prepare ccache timestamp
         id: ccache_cache_keys
-        run: |
-          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
+        run: echo "date=`date -u +'%Y-%m-%dT%H:%M:%SZ'`" >> $GITHUB_OUTPUT
       - name: ccache
         id: ccache
-        uses: actions/cache@v2
+        uses: actions/cache@e12d46a63a90f2fae62d114769bbf2a179198b5c # v3.3.3
+        # Note: can't upgrade to actions/cache 4.0 because it needs newer
+        # glibc than these containers have.
         with:
           path: /tmp/ccache
-          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
-          restore-keys: |
-            ${{ github.job }}-
-      - name: setup
+          key: ${{github.job}}-${{matrix.nametag}}-${{steps.ccache_cache_keys.outputs.date}}
+          restore-keys: ${{github.job}}-
+      - name: Build setup
         run: |
+            ${{matrix.setenvs}}
             src/build-scripts/ci-startup.bash
-      - name: dependencies
+      - name: Dependencies
         run: |
+            ${{matrix.depcmds}}
             src/build-scripts/gh-installdeps.bash
       - name: Build
-        run: |
-            src/build-scripts/ci-build.bash
+        run: src/build-scripts/ci-build.bash
       - name: Testsuite
-        run: |
-            src/build-scripts/ci-test.bash
-      - uses: actions/upload-artifact@v2
+        if: matrix.skip_tests != '1'
+        run: src/build-scripts/ci-test.bash
+      # - name: Check out ABI standard
+      #   if: matrix.abi_check != ''
+      #   uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      #   with:
+      #     ref: ${{matrix.abi_check}}
+      #     path: abi_standard
+      # - name: Build ABI standard
+      #   if: matrix.abi_check != ''
+      #   run: |
+      #       mkdir -p abi_standard/build
+      #       pushd abi_standard
+      #       src/build-scripts/ci-build.bash
+      #       popd
+      # - name: Check ABI
+      #   if: matrix.abi_check != ''
+      #   run: |
+      #       src/build-scripts/ci-abicheck.bash ./build abi_standard/build libOpenImageIO libOpenImageIO_Util
+      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: failure()
         with:
-          name: ${{ github.job }}
+          name: oiio-${{github.job}}-${{matrix.nametag}}
           path: |
-            build/*/testsuite/*/*.*
-            build/*/CMake*.{txt,log}
+            build/cmake-save
+            build/compat_reports
+            build/testsuite/*/*.*
+
+
+
 
   vfxplatform-2021:
     # Test what's anticipated to be VFX Platform 2021 -- mainly, that means
