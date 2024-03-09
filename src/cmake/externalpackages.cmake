@@ -75,7 +75,7 @@ link_directories ("${Boost_LIBRARY_DIRS}")
 
 
 checked_find_package (OpenImageIO REQUIRED
-                      VERSION_MIN 2.5)
+                      VERSION_MIN 2.4)
 # checked_find_package (TIFF REQUIRED
 #                       VERSION_MIN 4.0)
 # checked_find_package (ZLIB REQUIRED)
