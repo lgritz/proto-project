@@ -177,10 +177,6 @@ endif ()
 
 
 # Export the configuration files. There are also library-specific config
-# exports in the CMakeLists.txt of libOpenImageIO.
-
-
-# Export the configuration files. There are also library-specific config
 # exports in the CMakeLists.txt of library subdirectories.
 # Turn this ON for projects that have "downstream" CMake consumers who need
 # exported cmake configuration files as part of the build.

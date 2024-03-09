@@ -8,8 +8,12 @@ if [[ "$USE_SIMD" != "" ]] ; then
     MY_CMAKE_FLAGS="$MY_CMAKE_FLAGS -DUSE_SIMD=$USE_SIMD"
 fi
 
-pushd build/$PLATFORM
-cmake ../.. -G "$CMAKE_GENERATOR" \
+if [[ -n "$CODECOV" ]] ; then
+    Proto_CMAKE_FLAGS="$Proto_CMAKE_FLAGS -DCODECOV=${CODECOV}"
+fi
+
+pushd build
+cmake .. -G "$CMAKE_GENERATOR" \
         -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
         -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" \
         -DCMAKE_INSTALL_PREFIX="$Proto_ROOT" \
@@ -17,9 +21,15 @@ cmake ../.. -G "$CMAKE_GENERATOR" \
         -DCMAKE_INSTALL_LIBDIR="$Proto_ROOT/lib" \
         -DCMAKE_CXX_STANDARD="$CMAKE_CXX_STANDARD" \
         $MY_CMAKE_FLAGS -DVERBOSE=1
+
+# Save a copy of the generated files for debugging broken CI builds.
+mkdir cmake-save || /bin/true
+cp -r CMake* *.cmake cmake-save
+
+: ${BUILDTARGET:=install}
 if [[ "$BUILDTARGET" != "none" ]] ; then
-    echo "Parallel build " ${CMAKE_BUILD_PARALLEL_LEVEL}
-    time cmake --build . --target ${BUILDTARGET:=install} --config ${CMAKE_BUILD_TYPE}
+    echo "Parallel build ${CMAKE_BUILD_PARALLEL_LEVEL} of target ${BUILDTARGET}"
+    time cmake --build . --target ${BUILDTARGET} --config ${CMAKE_BUILD_TYPE}
 fi
 popd
 

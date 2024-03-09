@@ -29,7 +29,7 @@ brew unlink python@3.9 || true
 brew unlink python@3.8 || true
 brew link --overwrite --force python@${PYTHON_VERSION} || true
 brew upgrade --display-times -q cmake || true
-brew install --display-times -q libtiff ilmbase openexr opencolorio
+brew install --display-times -q libtiff ilmbase openexr opencolorio openimageio
 brew install --display-times -q libpng giflib
 brew install --display-times -q freetype pybind11 || true
 brew install --display-times -q qt

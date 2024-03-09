@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 
 # Utility script to download and build libpng
-#
-# Copyright Contributors to the OpenImageIO project.
-# SPDX-License-Identifier: BSD-3-Clause
-# https://github.com/OpenImageIO/oiio
 
 # Exit the whole script if any command fails.
 set -ex
@@ -33,18 +29,19 @@ if [[ ! -e ${LIBPNG_SRC_DIR} ]] ; then
     git clone ${LIBPNG_REPO} ${LIBPNG_SRC_DIR}
 fi
 cd ${LIBPNG_SRC_DIR}
+
+
 echo "git checkout ${LIBPNG_VERSION} --force"
 git checkout ${LIBPNG_VERSION} --force
 
-mkdir -p ${LIBPNG_BUILD_DIR}
-cd ${LIBPNG_BUILD_DIR}
-time cmake --config Release \
-           -DCMAKE_BUILD_TYPE=Release \
-           -DCMAKE_INSTALL_PREFIX=${LIBPNG_INSTALL_DIR} \
-           -DPNG_EXECUTABLES=OFF \
-           -DPNG_TESTS=OFF \
-           ${LIBPNG_CONFIG_OPTS} ..
-time cmake --build . --config Release --target install
+if [[ -z $DEP_DOWNLOAD_ONLY ]]; then
+    time cmake -S . -B ${LIBPNG_BUILD_DIR} -DCMAKE_BUILD_TYPE=Release \
+               -DCMAKE_INSTALL_PREFIX=${LIBPNG_INSTALL_DIR} \
+               -DPNG_EXECUTABLES=OFF \
+               -DPNG_TESTS=OFF \
+               ${LIBPNG_CONFIG_OPTS}
+    time cmake --build ${LIBPNG_BUILD_DIR} --config Release --target install
+fi
 
 # ls -R ${LIBPNG_INSTALL_DIR}
 popd

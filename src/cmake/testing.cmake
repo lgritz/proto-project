@@ -1,6 +1,6 @@
-# Copyright Contributors to the OpenImageIO project.
+# Copyright Contributors to the Proto project.
 # SPDX-License-Identifier: BSD-3-Clause
-# https://github.com/OpenImageIO/oiio/
+# https://github.com/lgritz/proto-project
 
 include (CTest)
 

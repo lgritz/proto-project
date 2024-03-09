@@ -9,14 +9,8 @@ VCPKG_INSTALLATION_ROOT=/c/vcpkg
 
 export CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH:=.}
 export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;$DEP_DIR"
-export BOOST_ROOT=${BOOST_ROOT_1_72_0}
-
-BOOST_UNIX_PATH=$(echo "/$BOOST_ROOT" | sed -e 's/\\/\//g' -e 's/://')
-echo "BOOST_UNIX_PATH=$BOOST_UNIX_PATH"
-
-export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;$BOOST_ROOT"
 export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;$VCPKG_INSTALLATION_ROOT/installed/x64-windows"
-export PATH="$PATH:$DEP_DIR/bin:$DEP_DIR/lib:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin:/bin:${BOOST_UNIX_PATH}/lib:${BOOST_UNIX_PATH}/bin:${BOOST_UNIX_PATH}/lib64-msvc-14.2:$PWD/ext/dist/bin:$PWD/ext/dist/lib"
+export PATH="$PATH:$DEP_DIR/bin:$DEP_DIR/lib:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin:/bin:$PWD/ext/dist/bin:$PWD/ext/dist/lib"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$DEP_DIR/bin:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$DEP_DIR/lib:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/lib"
 
@@ -29,10 +23,14 @@ export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$DEP_DIR/lib:$VCPKG_INSTALLATION_ROOT/i
 
 if [[ "$PYTHON_VERSION" == "3.6" ]] ; then
     export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;/c/hostedtoolcache/windows/Python/3.6.8/x64"
-else
+elif [[ "$PYTHON_VERSION" == "3.7" ]] ; then
     export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;/c/hostedtoolcache/windows/Python/3.7.9/x64"
     export Python_EXECUTABLE="/c/hostedtoolcache/windows/Python/3.7.9/x64/python.exe"
-    export PYTHONPATH=$OpenImageIO_ROOT/lib/python${PYTHON_VERSION}/site-packages
+    export PYTHONPATH=$Proto_ROOT/lib/python${PYTHON_VERSION}/site-packages
+elif [[ "$PYTHON_VERSION" == "3.9" ]] ; then
+    export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;/c/hostedtoolcache/windows/Python/3.9.10/x64"
+    export Python_EXECUTABLE="/c/hostedtoolcache/windows/Python/3.9.10/x64/python3.exe"
+    export PYTHONPATH=$Proto_ROOT/lib/python${PYTHON_VERSION}/site-packages
 fi
 pip install numpy
 
@@ -47,17 +45,25 @@ vcpkg list
 echo "---------------"
 # vcpkg update
 # 
-# # vcpkg install zlib:x64-windows
+
+time vcpkg install boost-container:x64-windows
+time vcpkg install boost-filesystem:x64-windows
+time vcpkg install boost-math:x64-windows
+time vcpkg install boost-stacktrace:x64-windows
+time vcpkg install boost-system:x64-windows
+time vcpkg install boost-thread:x64-windows
+
+#vcpkg install libdeflate:x64-windows
+#vcpkg install zlib:x64-windows
 vcpkg install tiff:x64-windows
 # vcpkg install libpng:x64-windows
 # vcpkg install giflib:x64-windows
 vcpkg install freetype:x64-windows
 # # vcpkg install openexr:x64-windows
-# # vcpkg install libjpeg-turbo:x64-windows
+vcpkg install libjpeg-turbo:x64-windows
 # 
 # vcpkg install libraw:x64-windows
 # vcpkg install openjpeg:x64-windows
-# vcpkg install libsquish:x64-windows
 # # vcpkg install ffmpeg:x64-windows   # takes FOREVER!
 # # vcpkg install webp:x64-windows  # No such vcpkg package?a
 # 
@@ -72,7 +78,7 @@ vcpkg install freetype:x64-windows
 # 
 # # export PATH="$PATH:$DEP_DIR/bin:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin"
 # export PATH="$DEP_DIR/lib:$DEP_DIR/bin:$PATH:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/lib"
-export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;$VCPKG_INSTALLATION_ROOT/installed/x64-windows/lib"
+export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH:$VCPKG_INSTALLATION_ROOT/installed/x64-windows"
 # export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/lib:$DEP_DIR/lib:$DEP_DIR/bin"
 # 
 echo "All VCPkg installs:"
@@ -86,11 +92,11 @@ vcpkg list
 #
 #
 
-src/build-scripts/build_zlib.bash
-export ZLIB_ROOT=$PWD/ext/dist
+# src/build-scripts/build_zlib.bash
+# export ZLIB_ROOT=$PWD/ext/dist
 
-src/build-scripts/build_libpng.bash
-export PNG_ROOT=$PWD/ext/dist
+# src/build-scripts/build_libpng.bash
+# export PNG_ROOT=$PWD/ext/dist
 
 # We're currently getting libtiff from vcpkg
 #src/build-scripts/build_libtiff.bash
@@ -127,43 +133,12 @@ echo "DEP_DIR $DEP_DIR :"
 ls -R -l "$DEP_DIR"
 
 
-#OPENIMAGEIO_REPO=lgritz/oiio
-#OPENIMAGEIO_BRANCH=lg-cmake312
-OPENIMAGEIO_INSTALLDIR=$DEP_DIR
-OPENIMAGEIO_CMAKE_FLAGS+=" -DOIIO_BUILD_TESTS=0 -DOIIO_BUILD_TOOLS=0"
-OPENIMAGEIO_CMAKE_FLAGS+=" -DUSE_PYTHON=0 -DUSE_OPENGL=0 -DUSE_GENERATED_EXPORT_HEADER=1"
-OPENIMAGEIO_CMAKE_FLAGS+=" -DENABLE_DPX=0 -DENABLE_CINEON=0 -DENABLE_DDS=0"
-OPENIMAGEIO_CMAKE_FLAGS+=" -DENABLE_IFF=0 -DENABLE_ICO=0 -DENABLE_PSD=0"
-OPENIMAGEIO_CMAKE_FLAGS+=" -DENABLE_PNM=0 -DENABLE_ZFILE=0 -DENABLE_SOFTIMAGE=0"
-OPENIMAGEIO_CMAKE_FLAGS+=" -DLINKSTATIC=1 -DBUILD_SHARED_LIBS=0"
-OPENIMAGEIO_CMAKE_FLAGS+=" -DBUILD_COIIO=0"
-export OPENIMAGEIO_CMAKE_FLAGS
-source src/build-scripts/build_openimageio.bash
-
-
-cp $DEP_DIR/lib/*.lib $DEP_DIR/bin
-cp $DEP_DIR/bin/*.dll $DEP_DIR/lib
-echo "after OIIO install, DEP_DIR $DEP_DIR :"
-ls -R -l "$DEP_DIR"
-
-
-# export PATH="$PATH:$DEP_DIR/bin:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin"
-export PATH="$DEP_DIR/lib:$DEP_DIR/bin:$PATH:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/lib"
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/lib:$DEP_DIR/lib:$DEP_DIR/bin"
-
-
 # source src/build-scripts/build_openexr.bash
-# export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH:$ILMBASE_ROOT:$OPENEXR_ROOT"
-# source src/build-scripts/build_ocio.bash
+# export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;$ILMBASE_ROOT;$OPENEXR_ROOT"
+# source src/build-scripts/build_opencolorio.bash
 
-
-if [[ "$PYTHON_VERSION" == "3.6" ]] ; then
-    export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;/c/hostedtoolcache/windows/Python/3.6.8/x64"
-fi
-
-# For CI on Windows, prefer to pick up static libs where possible
-MY_CMAKE_FLAGS="$MY_CMAKE_FLAGS -DLINKSTATIC=1 -DBUILD_SHARED_LIBS=0"
-
+OPENIMAGEIO_INSTALL_DIR=$DEP_DIR
+source src/build-scripts/build_openimageio.bash
 
 
 # Save the env for use by other stages

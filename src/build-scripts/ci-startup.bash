@@ -4,27 +4,6 @@
 # Since it sets many env variables needed by the caller, it should be run
 # with 'source', not in a separate shell.
 
-# Figure out the platform
-if [[ $$RUNNER_OS == macOS ]] ; then
-    export ARCH=macosx
-elif [[ $RUNNER_OS == Linux ]] ; then
-    export ARCH=linux64
-elif [[ $RUNNER_OS == Windows ]] ; then
-    export ARCH=windows64
-elif [[ `uname -m` == aarch64 ]] ; then
-    export ARCH=aarch64
-else
-    export ARCH=unknown
-fi
-export PLATFORM=$ARCH
-
-if [[ "${DEBUG:=0}" != "0" ]] ; then
-    export PLATFORM=${PLATFORM}.debug
-fi
-
-echo "Architecture is $ARCH"
-echo "Build platform name is $PLATFORM"
-
 # Environment variables we always need
 export PATH=/usr/local/bin/_ccache:/usr/lib/ccache:$PATH
 export USE_CCACHE=${USE_CCACHE:=1}
@@ -40,10 +19,11 @@ export DYLD_LIBRARY_PATH=$Proto_ROOT/lib:$DYLD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$Proto_ROOT/lib:$LD_LIBRARY_PATH
 export OIIO_LIBRARY_PATH=$Proto_ROOT/lib
 export LSAN_OPTIONS=suppressions=$PWD/src/build-scripts/nosanitize.txt
-export ASAN_OPTIONS=print_suppressions=0
+export ASAN_OPTIONS=print_suppressions=0:detect_odr_violation=1
 
-export PYTHON_VERSION=${PYTHON_VERSION:="2.7"}
+export PYTHON_VERSION=${PYTHON_VERSION:="3.7"}
 export PYTHONPATH=$Proto_ROOT/lib/python${PYTHON_VERSION}/site-packages:$PYTHONPATH
+export PYTHONPATH=$Proto_ROOT/lib/python${PYTHON_VERSION}/site-packages/Proto:$PYTHONPATH
 export BUILD_MISSING_DEPS=${BUILD_MISSING_DEPS:=1}
 export COMPILER=${COMPILER:=gcc}
 export CXX=${CXX:=g++}
@@ -51,12 +31,7 @@ export CI=true
 export USE_NINJA=${USE_NINJA:=1}
 export CMAKE_GENERATOR=${CMAKE_GENERATOR:=Ninja}
 export CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE:=Release}
-export CMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD:=11}
-
-export PARALLEL=${PARALLEL:=4}
-export PAR_MAKEFLAGS=-j${PARALLEL}
-export CMAKE_BUILD_PARALLEL_LEVEL=${CMAKE_BUILD_PARALLEL_LEVEL:=${PARALLEL}}
-export CTEST_PARALLEL_LEVEL=${CTEST_PARALLEL_LEVEL:=${PARALLEL}}
+export CMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD:=17}
 
 export LOCAL_DEPS_DIR=${LOCAL_DEPS_DIR:=$HOME/ext}
 export PATH=${LOCAL_DEPS_DIR}/dist/bin:$PATH
@@ -64,10 +39,28 @@ export LD_LIBRARY_PATH=${LOCAL_DEPS_DIR}/dist/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=${LOCAL_DEPS_DIR}/dist/lib64:$LD_LIBRARY_PATH
 export DYLD_LIBRARY_PATH=${LOCAL_DEPS_DIR}/dist/lib:$DYLD_LIBRARY_PATH
 
-export OCIO="$PWD/testsuite/common/OpenColorIO/nuke-default/config.ocio"
 export TESTSUITE_CLEANUP_ON_SUCCESS=${TESTSUITE_CLEANUP_ON_SUCCESS:=1}
 
-mkdir -p build/$PLATFORM dist/$PLATFORM
+# Parallel builds
+if [[ `uname -s` == "Linux" ]] ; then
+    echo "procs: " `nproc`
+    head -40 /proc/cpuinfo
+    export PARALLEL=${PARALLEL:=$((2 + `nproc`))}
+elif [[ "${RUNNER_OS}" == "macOS" ]] ; then
+    echo "procs: " `sysctl -n hw.ncpu`
+    sysctl machdep.cpu.features
+    export PARALLEL=${PARALLEL:=$((2 + `sysctl -n hw.ncpu`))}
+elif [[ "${RUNNER_OS}" == "Windows" ]] ; then
+    # Presumably Windows
+    export PARALLEL=${PARALLEL:=$((2 + ${NUMBER_OF_PROCESSORS}))}
+else
+    export PARALLEL=${PARALLEL:=6}
+fi
+export PAR_MAKEFLAGS=-j${PARALLEL}
+export CMAKE_BUILD_PARALLEL_LEVEL=${CMAKE_BUILD_PARALLEL_LEVEL:=${PARALLEL}}
+export CTEST_PARALLEL_LEVEL=${CTEST_PARALLEL_LEVEL:=${PARALLEL}}
+
+mkdir -p build dist
 
 echo "HOME = $HOME"
 echo "PWD = $PWD"
@@ -82,7 +75,7 @@ env | sort
 
 if [[ `uname -s` == "Linux" ]] ; then
     head -40 /proc/cpuinfo
-elif [[ $ARCH == macosx ]] ; then
+elif [[ ${RUNNER_OS} == "macOS" ]] ; then
     sysctl machdep.cpu.features
 fi
 
