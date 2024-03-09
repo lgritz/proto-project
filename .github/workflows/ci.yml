@@ -132,6 +132,7 @@ jobs:
             cxx_std: 17
             fmt_ver: 10.1.1
             openexr_ver: v3.2.1
+            openimageio_ver: release
             pybind11_ver: v2.11.1
             python_ver: "3.10"
             simd: avx2,f16c
@@ -184,10 +185,10 @@ jobs:
       CMAKE_CXX_STANDARD: ${{matrix.cxx_std}}
       USE_SIMD: ${{matrix.simd}}
       FMT_VERSION: ${{matrix.fmt_ver}}
+      OPENIMAGEIO_VERSION: ${{matrix.openimageio_ver}}
       OPENEXR_VERSION: ${{matrix.openexr_ver}}
       PYBIND11_VERSION: ${{matrix.pybind11_ver}}
       PYTHON_VERSION: ${{matrix.python_ver}}
-      OPENIMAGEIO_VERSION: ${{matrix.openimageio_ver}}
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - name: Prepare ccache timestamp

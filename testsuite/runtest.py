@@ -24,7 +24,7 @@ path = "../.."
 
 # Options for the command line
 parser = OptionParser()
-parser.add_option("-p", "--path", help="add to executable path",
+parser.add_option("-p", "--path", help="add to build area path",
                   action="store", type="string", dest="path", default="")
 parser.add_option("--devenv-config", help="use a MS Visual Studio configuration",
                   action="store", type="string", dest="devenv_config", default="")
@@ -39,30 +39,38 @@ if args and len(args) > 0 :
 if args and len(args) > 1 :
     path = args[1]
 path = os.path.normpath (path)
+OIIO_BUILD_ROOT = path
 
 tmpdir = "."
 tmpdir = os.path.abspath (tmpdir)
 redirect = " >> out.txt "
+wrapper_cmd = ""
 
-def oiio_relpath (path, start=os.curdir):
+def make_relpath (path, start=os.curdir):
     "Wrapper around os.path.relpath which always uses '/' as the separator."
     p = os.path.relpath (path, start)
-    return p if sys.platform != "win32" else p.replace ('\\', '/')
+    return p if platform.system() != 'Windows' else p.replace ('\\', '/')
 
 # Try to figure out where some key things are. Go by env variables set by
 # the cmake tests, but if those aren't set, assume somebody is running
-# this script by hand from inside build/PLATFORM/testsuite/TEST and that
+# this script by hand from inside build/testsuite/TEST and that
 # the rest of the tree has the standard layout.
-TESTSUITE_ROOT = oiio_relpath(os.getenv('TESTSUITE_ROOT', '../../../../testsuite'))
+TESTSUITE_ROOT = os.getenv('TESTSUITE_ROOT', '')
+if TESTSUITE_ROOT == '' :
+    if os.path.exists('../../../testsuite') :
+        TESTSUITE_ROOT = '../../../testsuite'
+    elif os.path.exists('../../../../testsuite') :
+        TESTSUITE_ROOT = '../../../../testsuite'
+TESTSUITE_ROOT = make_relpath(TESTSUITE_ROOT)
+PROTO_PROJECT_ROOT = make_relpath(TESTSUITE_ROOT + "/..")
+
 refdir = "ref/"
 refdirlist = [ refdir ]
 mytest = os.path.split(os.path.abspath(os.getcwd()))[-1]
 if str(mytest).endswith('.batch') :
     mytest = mytest.split('.')[0]
-test_source_dir = os.getenv('OIIO_TESTSUITE_SRC',
+test_source_dir = os.getenv('TESTSUITE_SRC',
                             os.path.join(TESTSUITE_ROOT, mytest))
-colorconfig_file = os.path.join(TESTSUITE_ROOT,
-                                "common", "OpenColorIO", "nuke-default", "config.ocio")
 
 # Swap the relative diff lines if the test suite is not being run via Makefile
 if TESTSUITE_ROOT != "../../../../testsuite":
@@ -77,14 +85,32 @@ else:
 
 command = ""
 outputs = [ "out.txt" ]    # default
+
+# The image comparison thresholds are tricky to remember. Here's the key:
+# A test fails if more than `failpercent` of pixel values differ by more
+# than `failthresh`, or if even one pixel differs by more than `hardfail`.
+failthresh = 0.004         # "Failure" threshold for any pixel value
+failpercent = 0.02         # Ok fo this percentage of pixels to "fail"
+hardfail = 0.012           # Even one pixel this wrong => hard failure
+allowfailures = 0          # Freebie failures
+
+# Some tests are designed for the app running to "fail" (in the sense of
+# terminating with an error return code), for example, a test that is designed
+# to present an error condition to check that it issues the right error. That
+# "failure" is a success of the test! For those cases, set `failureok = 1` to
+# indicate that the app having an error is fine, and the full test will pass
+# or fail based on comparing the output files.
 failureok = 0
-failthresh = 0.004
-hardfail = 0.012
-failpercent = 0.02
+
+
 anymatch = False
+cleanup_on_success = False
+if int(os.getenv('TESTSUITE_CLEANUP_ON_SUCCESS', '0')) :
+    cleanup_on_success = True
 
 image_extensions = [ ".tif", ".tx", ".exr", ".jpg", ".png", ".rla",
-                     ".dpx", ".iff", ".psd" ]
+                     ".dpx", ".iff", ".psd", ".bmp", ".fits", ".ico",
+                     ".jp2", ".sgi", ".tga", ".TGA", ".zfile" ]
 
 # print ("srcdir = " + srcdir)
 # print ("tmpdir = " + tmpdir)
@@ -98,9 +124,9 @@ if platform.system() == 'Windows' :
     if os.path.exists (os.path.join (test_source_dir, "src")) and not os.path.exists("./src") :
         shutil.copytree (os.path.join (test_source_dir, "src"), "./src")
     # if not os.path.exists("../data") :
-    #     shutil.copytree ("../../../testsuite/data", "..")
+    #     shutil.copytree ("../../testsuite/data", "..")
     # if not os.path.exists("../common") :
-    #     shutil.copytree ("../../../testsuite/common", "..")
+    #     shutil.copytree ("../../testsuite/common", "..")
 else :
     def newsymlink(src, dst):
         print("newsymlink", src, dst)
@@ -140,8 +166,8 @@ def text_diff (fromfile, tofile, diff_file=None):
         todate = time.ctime (os.stat (tofile).st_mtime)
         fromlines = open (fromfile, 'r').readlines()
         tolines   = open (tofile, 'r').readlines()
-        if replace_relative:
-            tolines = replace_relative(tolines)
+        # if replace_relative:
+        #     tolines = replace_relative(tolines)
     except:
         print ("Unexpected error:", sys.exc_info()[0])
         return -1
@@ -165,6 +191,13 @@ def text_diff (fromfile, tofile, diff_file=None):
     return 1
 
 
+def run_app(app, silent=False, concat=True):
+    command = app
+    if not silent:
+        command += redirect
+    if concat:
+        command += " ;\n"
+    return command
 
 def my_app (app):
     # when we use Visual Studio, built applications are stored
@@ -175,12 +208,6 @@ def my_app (app):
     if (platform.system () == 'Windows'):
         return app + "/$<CONFIGURATION>/" + app + " "
     return path + "/src/" + app + "/" + app + " "
-
-
-def oiio_relpath (path, start=os.curdir):
-    "Wrapper around os.path.relpath which always uses '/' as the separator."
-    p = os.path.relpath (path, start)
-    return p if sys.platform != "win32" else p.replace ('\\', '/')
 
 
 def oiio_app (app):
@@ -205,10 +232,11 @@ def diff_command (fileA, fileB, extraargs="", silent=False, concat=True) :
                + " -fail " + str(failthresh)
                + " -failpercent " + str(failpercent)
                + " -hardfail " + str(hardfail)
+               + " -allowfailures " + str(allowfailures)
                + " -warn " + str(2*failthresh)
                + " -warnpercent " + str(failpercent)
-               + " " + extraargs + " " + oiio_relpath(fileA,tmpdir) 
-               + " " + oiio_relpath(fileB,tmpdir))
+               + " " + extraargs + " " + make_relpath(fileA,tmpdir)
+               + " " + make_relpath(fileB,tmpdir))
     if not silent :
         command += redirect
     if concat:
@@ -235,10 +263,11 @@ def checkref (name, refdirlist) :
             pattern = "*.*"
         else :
             pattern = prefix+"-*"+extension+"*"
+        print("comparisons are", ([defaulttest] + glob.glob (os.path.join (ref, pattern))))
         for testfile in ([defaulttest] + glob.glob (os.path.join (ref, pattern))) :
             if not os.path.exists(testfile) :
                 continue
-            # print ("comparing " + name + " to " + testfile)
+            print ("comparing " + name + " to " + testfile)
             if extension in image_extensions :
                 # images -- use idiff
                 cmpcommand = diff_command (name, testfile, concat=False, silent=True)
@@ -294,12 +323,21 @@ def runtest (command, outputs, failureok=0) :
 
     for out in outputs :
         (prefix, extension) = os.path.splitext(out)
+        # On Windows, change line endings of text files to unix style before
+        # comparison to reference output.
+        if (platform.system() == 'Windows' and os.path.exists(out)
+                and extension == '.txt') :
+            os.rename (out, "crlf.txt")
+            os.system ("tr -d '\\r' < crlf.txt > " + out)
+            if os.path.exists('crlf.txt') :
+                os.remove('crlf.txt')
+
         (ok, testfile) = checkref (out, refdirlist)
 
         if ok :
             if extension in image_extensions :
                 # If we got a match for an image, save the idiff results
-                os.system (diff_command (out, testfile, silent=False))
+                os.system (diff_command (out, testfile, silent=False, concat=False))
             print ("PASS: " + out + " matches " + testfile)
         else :
             err = 1
@@ -318,7 +356,7 @@ def runtest (command, outputs, failureok=0) :
             if extension in image_extensions :
                 # If we failed to get a match for an image, send the idiff
                 # results to the console
-                os.system (diff_command (out, testfile, silent=False))
+                os.system (diff_command (out, testfile, silent=False, concat=False))
             if os.path.isfile("debug.log") and os.path.getsize("debug.log") :
                 print ("---   DEBUG LOG   ---\n")
                 #flog = open("debug.log", "r")
@@ -342,8 +380,8 @@ with open(os.path.join(test_source_dir,"run.py")) as f:
     exec (code)
 
 # Allow a little more slop for slight pixel differences when in DEBUG
-# mode or when running on remote Travis-CI or Appveyor machines.
-if (os.getenv('TRAVIS') or os.getenv('APPVEYOR') or os.getenv('DEBUG')) :
+# mode or when running on remote CI machines.
+if (os.getenv('CI') or os.getenv('DEBUG')) :
     failthresh *= 2.0
     hardfail *= 2.0
     failpercent *= 2.0
@@ -351,4 +389,11 @@ if (os.getenv('TRAVIS') or os.getenv('APPVEYOR') or os.getenv('DEBUG')) :
 
 # Run the test and check the outputs
 ret = runtest (command, outputs, failureok=failureok)
+
+if ret == 0 and cleanup_on_success :
+    for ext in image_extensions + [ ".txt", ".diff" ] :
+        for f in glob.iglob (srcdir + '/*' + ext) :
+            os.remove(f)
+            #print('REMOVED ', f)
+
 sys.exit (ret)
