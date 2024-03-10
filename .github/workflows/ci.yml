@@ -155,7 +155,7 @@ jobs:
             simd: avx2,f16c
             setenvs: export OPENCOLORIO_VERSION=main
                             PUGIXML_VERSION=master
-                            OIIO_CMAKE_FLAGS="-DFORTIFY_SOURCE=2"
+                            OPENIMAGEIO_CMAKE_FLAGS="-DBUILD_FMT_VERSION=master"
                             # The installed OpenVDB has a TLS conflict with Python 3.8
             # Test formatting. This test entry doesn't do a full build, it
             # just runs clang-format on everything, and passes if nothing is
