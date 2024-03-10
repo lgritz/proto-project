@@ -26,11 +26,11 @@ if [[ "$PYTHON_VERSION" == "3.6" ]] ; then
 elif [[ "$PYTHON_VERSION" == "3.7" ]] ; then
     export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;/c/hostedtoolcache/windows/Python/3.7.9/x64"
     export Python_EXECUTABLE="/c/hostedtoolcache/windows/Python/3.7.9/x64/python.exe"
-    export PYTHONPATH=$OpenImageIO_ROOT/lib/python${PYTHON_VERSION}/site-packages
+    export PYTHONPATH=$Proto_ROOT/lib/python${PYTHON_VERSION}/site-packages
 elif [[ "$PYTHON_VERSION" == "3.9" ]] ; then
     export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;/c/hostedtoolcache/windows/Python/3.9.10/x64"
     export Python_EXECUTABLE="/c/hostedtoolcache/windows/Python/3.9.10/x64/python3.exe"
-    export PYTHONPATH=$OpenImageIO_ROOT/lib/python${PYTHON_VERSION}/site-packages
+    export PYTHONPATH=$Proto_ROOT/lib/python${PYTHON_VERSION}/site-packages
 fi
 pip install numpy
 
@@ -136,6 +136,9 @@ ls -R -l "$DEP_DIR"
 # source src/build-scripts/build_openexr.bash
 # export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;$ILMBASE_ROOT;$OPENEXR_ROOT"
 # source src/build-scripts/build_opencolorio.bash
+
+OPENIMAGEIO_INSTALL_DIR=$DEP_DIR
+source src/build-scripts/build_openimageio.bash
 
 
 # Save the env for use by other stages
