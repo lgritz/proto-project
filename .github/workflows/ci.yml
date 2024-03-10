@@ -47,6 +47,7 @@ jobs:
             simd: "avx2,f16c"
             fmt_ver: 10.1.1
             pybind11_ver: v2.10.0
+            setenvs: export CONAN_PACKAGES="ptex/2.4.2@aswf/vfx2024"
 
     runs-on: ${{ matrix.runner }}
     container:
@@ -148,7 +149,7 @@ jobs:
             cxx_std: 20
             fmt_ver: master
             openexr_ver: main
-            openimageio_version: master
+            openimageio_ver: master
             pybind11_ver: master
             python_ver: "3.10"
             simd: avx2,f16c
@@ -164,13 +165,11 @@ jobs:
           - desc: "clang-format"
             nametag: clang-format
             runner: ubuntu-latest
-            container: aswftesting/ci-osl:2022-clang14
             cxx_std: 17
             extra_artifacts: "src/*.*"
             openimageio_ver: release
             python_ver: "3.10"
             simd: avx2,f16c
-            batched: b8_AVX2
             skip_tests: 1
             setenvs: export BUILDTARGET=clang-format
                             LLVM_VERSION=17.0.6
