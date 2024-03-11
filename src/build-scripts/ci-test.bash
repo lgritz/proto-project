@@ -9,12 +9,14 @@ set -ex
 
 $Proto_ROOT/bin/protobin --help || true
 
-PYTHONPATH=${PWD}/build/$PLATFORM/lib/python/site-packages:$PYTHONPATH
-PYTHONPATH=${PWD}/build/$PLATFORM/lib/python/site-packages/${CMAKE_BUILD_TYPE}:$PYTHONPATH
+PYTHONPATH=${PWD}/build/lib/python/site-packages:$PYTHONPATH
+PYTHONPATH=${PWD}/build/lib/python/site-packages/Proto:$PYTHONPATH
+PYTHONPATH=${PWD}/build/lib/python/site-packages/${CMAKE_BUILD_TYPE}:$PYTHONPATH
 
 echo "Parallel test ${CTEST_PARALLEL_LEVEL}"
 echo "Default timeout ${CTEST_TEST_TIMEOUT}"
 echo "Test exclusions '${CTEST_EXCLUSIONS}'"
+echo "PYTHONPATH '${PYTHONPATH}'"
 echo "CTEST_ARGS '${CTEST_ARGS}'"
 
 pushd build
