@@ -46,7 +46,7 @@ macro (find_python)
     set (PythonInterp_FIND_VERSION_MAJOR ${Python_VERSION_MAJOR})
 
     if (NOT DEFINED PYTHON_SITE_DIR)
-        set (PYTHON_SITE_DIR "${CMAKE_INSTALL_LIBDIR}/python${PYTHON_VERSION_FOUND}/site-packages/OpenImageIO")
+        set (PYTHON_SITE_DIR "${CMAKE_INSTALL_LIBDIR}/python${PYTHON_VERSION_FOUND}/site-packages/${PROJECT_NAME}")
     endif ()
     message (VERBOSE "    Python site packages dir ${PYTHON_SITE_DIR}")
     message (VERBOSE "    Python to include 'lib' prefix: ${PYLIB_LIB_PREFIX}")
